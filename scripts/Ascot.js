@@ -63,9 +63,10 @@
          * descriptor object
          * @private
          * @param  {Object} desc A descriptor object defining the module
+         * @param  {Object} data Some data associated with the module
          * @return {Object}      The constructed module
          */
-        function createModule(desc) {
+        function createModule(desc, data) {
             var element;
 
             // Require that a template be specified
