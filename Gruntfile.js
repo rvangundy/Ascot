@@ -14,6 +14,14 @@ module.exports = function (grunt) {
                 'test/spec/{,*/}*.js'
             ]
         },
+        jsdoc : {
+            dist : {
+                src: ['./scripts/*.js'],
+                options: {
+                    destination: 'doc'
+                }
+            }
+        },
         qunit: {
             all: {
                 options: {
