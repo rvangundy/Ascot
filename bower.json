@@ -1,6 +1,6 @@
 {
-  "name": "Ascot",
-  "version": "0.0.0",
+  "name": "ascot",
+  "version": "0.0.1",
   "dependencies": {
     "jquery": "~2.0.2",
     "handlebars": "~1.0.0",
