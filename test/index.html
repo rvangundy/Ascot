@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Ascot Test Fixture</title>
+    <link rel="stylesheet" href="../components/qunit/qunit.css">
+    <script src="../components/qunit/qunit.js"></script>
+    <script src="../scripts/Ascot.js"></script>
+    <script src="../components/jquery/jquery.js"></script>
+    <script src="../components/handlebars/handlebars.js"></script>
+    <script src="../components/underscore/underscore.js"></script>
+    <script id="templateA" type="text/x-handlebars-template">
+        <div class="person person-philosopher">
+            <li>Name : {{name}}</li>
+            <li>Age : {{age}}</li>
+        </div>
+    </script>
+</head>
+<body>
+    <div id="qunit"></div>
+    <div id="qunit-fixture"></div>
+    <script src="test.js"></script>
+</body>
+</html>

@@ -27,7 +27,7 @@
             var elements = document.querySelectorAll(selector);
 
             // Replace each element with a module
-            for (var i = elements.length; i>=0; i-=1) {
+            for (var i = elements.length-1; i>=0; i-=1) {
                 el     = elements[i];
                 parent = el.parentNode;
 
@@ -42,7 +42,13 @@
                     }
 
                     // Replace element in DOM with new module element
-                    module.__previousElement__ = parent.replaceChild(el, module.element);
+                    module.element.id = el.id;
+                    Object.defineProperty(module, '__previousElement__', {
+                        value        : parent.replaceChild(module.element, el),
+                        writable     : false,
+                        configurable : true,
+                        enumerable   : false
+                    });
 
                     // Add to the collection to be returned
                     modules.push(module);
@@ -151,10 +157,8 @@
             // Establish user options
             if (desc.options) { module.options = desc.options; }
 
-            /**
-             * @property {Element} element The generated HTML element associated with the module
-             */
-            element = module.template(data);
+            // Create the element
+            element = htmlStringToElement(module.template(data));
 
             /**
              * Destroys the module, removing it from memory.  Also destroys
@@ -182,12 +186,33 @@
              * Removes a module from a DOM element, returning the element
              * to its original state prior to loading the module.
              * @method  remove
-             * @return {[type]} [description]
+             * @return {Object} This for chaining
              */
-            function remove() {}
+            function remove() {
+                /* jshint validthis : true */
+                var parent = this.element.parent;
 
-            // Defines the external API for the module
+                if (parent) {
+                    parent.replaceChild(this.__previousElement__, this.element);
+                }
+
+                return this;
+            }
+
+            /************************
+             *  Default module API  *
+             ************************/
+
             Object.defineProperties(module, {
+                /**
+                 * @property {Element} element The generated HTML element associated with the module
+                 */
+                element : {
+                    value        : element,
+                    writable     : false,
+                    enumerable   : false,
+                    configurable : false
+                },
 
                 destroy : {
                     value        : destroy,
@@ -197,12 +222,6 @@
                 },
                 remove : {
                     value        : remove,
-                    writable     : false,
-                    enumerable   : false,
-                    configurable : false
-                },
-                element : {
-                    value        : element,
                     writable     : false,
                     enumerable   : false,
                     configurable : false
@@ -223,6 +242,7 @@
 
     /**
      * Performs the object prototype toString method
+     * @private
      * @param  {Object} obj The object to cast to a string
      * @return {String}     A string representation of the object
      */
@@ -232,11 +252,24 @@
 
     /**
      * Determines of the passed object is an array
+     * @private
      * @param  {Object}  obj An object to check
      * @return {Boolean}     True if object is an array
      */
     function isArray(obj) {
         return toString(obj) === '[object Array]';
+    }
+
+    /**
+     * Takes a string of HTML and converts it to an actual DOM element
+     * @private
+     * @param  {String} htmlString An HTML string with a single root element
+     * @return {Element}           An HTML element
+     */
+    function htmlStringToElement(htmlString) {
+        var div = document.createElement('div');
+        div.innerHTML = htmlString;
+        return div.children[0];
     }
 
     /**************************

@@ -1,21 +1,21 @@
-/* globals QUnit, test, ok */
-require(['jquery'], function($){
-    'use strict';
+/* global test, ok, equal, _, Ascot, Handlebars, $ */
+'use strict';
 
-    QUnit.start();
+test('Basic Test', function() {
+    var ascot = Ascot;
+    var template = Handlebars.compile($('#templateA').html());
+    var personMaker = ascot({ template : template });
 
-    module('myLibraryTest', {
-        setup: function(){
-            $('<div id="domDependency"></div>').appendTo(document.body);
-        },
-        teardown: function(){
-            document.body.innerHTML = '';
-        }
-    });
+    $('body').append('<div class="person"></div><div class="person"></div>');
 
-    test('my test', function(){
-        var myDiv = $('#domDependency');
-        ok(myDiv, 'everythings is fine');
-    });
+    ok(_.isFunction(template), 'Loaded template');
+    ok(_.isFunction(ascot), 'Ascot is a function');
 
+    personMaker('.person', [{ name : 'Plato', age : 2441 }, { name : 'Aristotle', age : 2397 }]);
+
+    equal($('.person > li').html(), 'Name : Plato', 'Template applied');
+
+    // mod.destroy();
+
+    // ok(!$('.person').length, 'Module and corresponding element destroyed');
 });

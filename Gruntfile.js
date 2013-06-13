@@ -1,10 +1,7 @@
 module.exports = function (grunt) {
     'use strict';
 
-    grunt.loadNpmTasks('grunt-contrib-connect');
-    grunt.loadNpmTasks('grunt-contrib-jshint');
-    grunt.loadNpmTasks('grunt-contrib-clean');
-    grunt.loadNpmTasks('grunt-qunit-amd');
+    require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
 
     grunt.initConfig({
         jshint: {
@@ -17,35 +14,28 @@ module.exports = function (grunt) {
                 'test/spec/{,*/}*.js'
             ]
         },
-        'qunit_amd': {
+        qunit: {
+            all: {
+                options: {
+                    urls: [
+                        'http://localhost:8000/test/index.html'
+                    ]
+                }
+            }
+        },
+        connect: {
             test: {
-                tests: [
-                    'test/**/*.js'
-                ],
-                require: {
-                    baseUrl: './',
-                    paths: {
-                        scripts    : 'scripts/',
-                        jquery     : 'components/jquery/jquery',
-                        Handlebars : 'components/handlebars/handlebars',
-                        text       : 'components/requirejs-text/text',
-                        hbars      : 'components/requirejs-handlebars/hbars'
-                    },
-                    shims: {
-                        jquery : {
-                            exports : 'jquery'
-                        },
-                        Handlebars : {
-                            exports : 'Handlebars'
-                        }
-                    }
+                options: {
+                    port: 8000,
+                    base: '.'
                 }
             }
         }
     });
 
     grunt.registerTask('test', [
-        'qunit_amd'
+        'connect:test',
+        'qunit'
     ]);
 
     grunt.registerTask('default', [
