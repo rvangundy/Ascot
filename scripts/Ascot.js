@@ -287,13 +287,13 @@
      * @return {String}            A merged list of class names
      */
     function mergeClassLists(classListA, classListB) {
-        var newList = [];
+        var newList;
         var name;
 
         classListA = classListA.split(' ');
         classListB = classListB.split(' ');
 
-        newList.concat(classListA);
+        newList = [].concat(classListA);
 
         for (var i=0; i<classListB.length; i+=1) {
             name = classListB[i];
