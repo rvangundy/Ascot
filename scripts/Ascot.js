@@ -86,7 +86,7 @@
             for (var i in desc) { obj[i] = desc[i]; }
 
             // Defines the initial, non-configurable properties of the module
-            var module = Object.create({}, {
+            var module = Object.create(obj, {
                 /* jshint camelcase: false */
 
                 /**
