@@ -50,9 +50,18 @@
                         enumerable   : false
                     });
 
+                    // Merge the classes
+                    module.element.className = mergeClassLists(module.element.className, el.className);
+
                     // Add to the collection to be returned
                     modules.push(module);
                 }
+            }
+
+            // Initialize all modules
+            for (var j=0; j<modules.length; j+=1) {
+                module = modules[j];
+                if (module.initialize) { module.initialize(module.element); }
             }
 
             return modules;
@@ -213,7 +222,6 @@
                     enumerable   : false,
                     configurable : false
                 },
-
                 destroy : {
                     value        : destroy,
                     writable     : false,
@@ -270,6 +278,32 @@
         var div = document.createElement('div');
         div.innerHTML = htmlString;
         return div.children[0];
+    }
+
+    /**
+     * Merges together two lists of classes in to a single class list
+     * @param  {String} classListA A space-separated list of class names
+     * @param  {String} classListB A space-separated list of class names
+     * @return {String}            A merged list of class names
+     */
+    function mergeClassLists(classListA, classListB) {
+        var newList = [];
+        var name;
+
+        classListA = classListA.split(' ');
+        classListB = classListB.split(' ');
+
+        newList.concat(classListA);
+
+        for (var i=0; i<classListB.length; i+=1) {
+            name = classListB[i];
+
+            if (newList.indexOf(name) < 0) {
+                newList.push(name);
+            }
+        }
+
+        return newList;
     }
 
     /**************************
