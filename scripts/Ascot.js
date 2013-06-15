@@ -303,7 +303,7 @@
             }
         }
 
-        return newList;
+        return newList.join(' ').trim();
     }
 
     /**************************
