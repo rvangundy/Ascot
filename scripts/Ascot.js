@@ -77,9 +77,13 @@
          */
         function createModule(desc, data) {
             var element;
+            var obj = {};
 
             // Require that a template be specified
             if (!desc.template) { throw new Error('No template provided.'); }
+
+            // Copy over all properties
+            for (var i in desc) { obj[i] = desc[i]; }
 
             // Defines the initial, non-configurable properties of the module
             var module = Object.create({}, {
@@ -94,6 +98,19 @@
                  */
                 template : {
                     value        : desc.template,
+                    writable     : false,
+                    configurable : false,
+                    enumerable   : false
+                },
+
+                /**
+                 * The initialize method is run immediately after the module is
+                 * added to the DOM
+                 * @param {Element} element The top-level DOM element associated with the module
+                 * @type {Function}
+                 */
+                initialize : {
+                    value        : desc.initialize,
                     writable     : false,
                     configurable : false,
                     enumerable   : false
