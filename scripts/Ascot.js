@@ -2,9 +2,6 @@
     /* global define */
     'use strict';
 
-    // A set of default options to use on the module
-    var defaultOptions = {};
-
     /**
      * The Ascot factory function
      * @param  {Object} desc An object describing a module's behavior
@@ -18,7 +15,7 @@
          * @param  {Object|Array}   data     One or more data objects to bind
          * @return {Array}                   A list of all modules created
          */
-        function applyModule(selector, data) {
+        function applyModule(selector, data, options) {
             /* jshint validthis : true, camelcase : false */
             var el;
             var parent;
@@ -34,11 +31,12 @@
                 if (parent) {
                     // Associate each element/module with a new data set
                     if (isArray(data)) {
-                        module = createModule(desc, data[i]);
+                        module = createModule(desc, data[i], options);
 
                     // Associate each element/module with the same data set
                     } else {
-                        module = createModule(desc, data);
+                        module = createModule(desc, data, options);
+                        data = [data];
                     }
 
                     // Replace element in DOM with new module element
@@ -61,7 +59,7 @@
             // Initialize all modules
             for (var j=0; j<modules.length; j+=1) {
                 module = modules[j];
-                if (module.initialize) { module.initialize(module.element); }
+                if (module.initialize) { module.initialize(module.element, data[j], options); }
             }
 
             return modules;
@@ -75,7 +73,7 @@
          * @param  {Object} data Some data associated with the module
          * @return {Object}      The constructed module
          */
-        function createModule(desc, data) {
+        function createModule(desc, data, options) {
             var element;
             var obj = {};
 
@@ -173,15 +171,15 @@
                  * @type {Object}
                  */
                 __options__ : {
-                    value        : Object.create(defaultOptions),
+                    value        : desc.options || {},
                     writable     : false,
                     configurable : false,
                     enumerable   : false
                 }
             });
 
-            // Establish user options
-            if (desc.options) { module.options = desc.options; }
+            // Establish passed options
+            if (options) { module.options = options; }
 
             // Create the element
             element = htmlStringToElement(module.template(data));

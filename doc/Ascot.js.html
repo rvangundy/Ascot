@@ -29,9 +29,6 @@
     /* global define */
     'use strict';
 
-    // A set of default options to use on the module
-    var defaultOptions = {};
-
     /**
      * The Ascot factory function
      * @param  {Object} desc An object describing a module's behavior
@@ -45,7 +42,7 @@
          * @param  {Object|Array}   data     One or more data objects to bind
          * @return {Array}                   A list of all modules created
          */
-        function applyModule(selector, data) {
+        function applyModule(selector, data, options) {
             /* jshint validthis : true, camelcase : false */
             var el;
             var parent;
@@ -61,11 +58,12 @@
                 if (parent) {
                     // Associate each element/module with a new data set
                     if (isArray(data)) {
-                        module = createModule(desc, data[i]);
+                        module = createModule(desc, data[i], options);
 
                     // Associate each element/module with the same data set
                     } else {
-                        module = createModule(desc, data);
+                        module = createModule(desc, data, options);
+                        data = [data];
                     }
 
                     // Replace element in DOM with new module element
@@ -88,7 +86,7 @@
             // Initialize all modules
             for (var j=0; j&lt;modules.length; j+=1) {
                 module = modules[j];
-                if (module.initialize) { module.initialize(module.element); }
+                if (module.initialize) { module.initialize(module.element, data[j], options); }
             }
 
             return modules;
@@ -102,14 +100,18 @@
          * @param  {Object} data Some data associated with the module
          * @return {Object}      The constructed module
          */
-        function createModule(desc, data) {
+        function createModule(desc, data, options) {
             var element;
+            var obj = {};
 
             // Require that a template be specified
             if (!desc.template) { throw new Error('No template provided.'); }
 
+            // Copy over all properties
+            for (var i in desc) { obj[i] = desc[i]; }
+
             // Defines the initial, non-configurable properties of the module
-            var module = Object.create({}, {
+            var module = Object.create(obj, {
                 /* jshint camelcase: false */
 
                 /**
@@ -121,6 +123,19 @@
                  */
                 template : {
                     value        : desc.template,
+                    writable     : false,
+                    configurable : false,
+                    enumerable   : false
+                },
+
+                /**
+                 * The initialize method is run immediately after the module is
+                 * added to the DOM
+                 * @param {Element} element The top-level DOM element associated with the module
+                 * @type {Function}
+                 */
+                initialize : {
+                    value        : desc.initialize,
                     writable     : false,
                     configurable : false,
                     enumerable   : false
@@ -183,15 +198,15 @@
                  * @type {Object}
                  */
                 __options__ : {
-                    value        : Object.create(defaultOptions),
+                    value        : desc.options || {},
                     writable     : false,
                     configurable : false,
                     enumerable   : false
                 }
             });
 
-            // Establish user options
-            if (desc.options) { module.options = desc.options; }
+            // Establish passed options
+            if (options) { module.options = options; }
 
             // Create the element
             element = htmlStringToElement(module.template(data));
@@ -314,13 +329,13 @@
      * @return {String}            A merged list of class names
      */
     function mergeClassLists(classListA, classListB) {
-        var newList = [];
+        var newList;
         var name;
 
         classListA = classListA.split(' ');
         classListB = classListB.split(' ');
 
-        newList.concat(classListA);
+        newList = [].concat(classListA);
 
         for (var i=0; i&lt;classListB.length; i+=1) {
             name = classListB[i];
@@ -330,7 +345,7 @@
             }
         }
 
-        return newList;
+        return newList.join(' ').trim();
     }
 
     /**************************
@@ -354,13 +369,13 @@
 </div>
 
 <nav>
-    <h2><a href="index.html">Index</a></h2><h3>Global</h3><ul><li><a href="global.html#__options__">__options__</a></li><li><a href="global.html#__previousElement__">__previousElement__</a></li><li><a href="global.html#destroy">destroy</a></li><li><a href="global.html#element">element</a></li><li><a href="global.html#options">options</a></li><li><a href="global.html#remove">remove</a></li><li><a href="global.html#shutdown">shutdown</a></li><li><a href="global.html#template">template</a></li><li><a href="global.html#update">update</a></li></ul>
+    <h2><a href="index.html">Index</a></h2><h3>Global</h3><ul><li><a href="global.html#__options__">__options__</a></li><li><a href="global.html#__previousElement__">__previousElement__</a></li><li><a href="global.html#destroy">destroy</a></li><li><a href="global.html#element">element</a></li><li><a href="global.html#initialize">initialize</a></li><li><a href="global.html#options">options</a></li><li><a href="global.html#remove">remove</a></li><li><a href="global.html#shutdown">shutdown</a></li><li><a href="global.html#template">template</a></li><li><a href="global.html#update">update</a></li></ul>
 </nav>
 
 <br clear="both">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.0-dev</a> on Sat Jun 15 2013 19:00:04 GMT-0400 (EDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.0-dev</a> on Tue Jun 18 2013 23:39:47 GMT-0400 (EDT)
 </footer>
 
 <script> prettyPrint(); </script>
