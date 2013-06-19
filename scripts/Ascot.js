@@ -156,6 +156,17 @@
                 },
 
                 /**
+                 * The data associated with this module
+                 * @type {Object}
+                 */
+                data : {
+                    configurable : false,
+                    enumerable   : false,
+                    writable     : true,
+                    value        : data
+                },
+
+                /**
                  * A clone of the DOM element prior to the application of a module
                  * @type {Element}
                  */
