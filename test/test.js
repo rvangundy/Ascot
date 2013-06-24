@@ -2,20 +2,20 @@
 'use strict';
 
 test('Basic Test', function() {
-    var ascot = Ascot;
-    var template = Handlebars.compile($('#templateA').html());
-    var personMaker = ascot({ template : template });
 
-    $('body').append('<div class="person"></div><div class="person"></div>');
+    ok(_.isFunction(Ascot), 'Ascot is a function in the global space');
 
-    ok(_.isFunction(template), 'Loaded template');
-    ok(_.isFunction(ascot), 'Ascot is a function');
+    var module = Ascot.createModule();
 
-    personMaker('.person', [{ name : 'Plato', age : 2441 }, { name : 'Aristotle', age : 2397 }]);
+    ok(_.isObject(module), 'Module was created');
 
-    equal($('.person > li').html(), 'Name : Plato', 'Template applied');
+    module.template = function() { return '<div class="test">Hello World!</div>'; };
+    module.element = document.getElementById('qunit');
 
-    // mod.destroy();
+    ok($(module.element).hasClass('test'), 'Setting module element instantly instantiated the module');
 
-    // ok(!$('.person').length, 'Module and corresponding element destroyed');
+    module.remove();
+
+    ok(!$(module.element).hasClass('test'), 'Removing the module restored the element to its original state');
+
 });
