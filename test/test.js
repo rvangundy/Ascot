@@ -1,21 +1,145 @@
-/* global test, ok, equal, _, Ascot, Handlebars, $ */
+/* global test, ok, equal, deepEqual, _, Ascot, Handlebars, $ */
 'use strict';
 
-test('Basic Test', function() {
+/*********************
+ *  Framework Setup  *
+ *********************/
 
+module('Setup');
+
+test('Ascot', function() {
     ok(_.isFunction(Ascot), 'Ascot is a function in the global space');
+});
 
-    var module = Ascot.createModule();
+/***************************
+ *  Base Module Formation  *
+ ***************************/
 
-    ok(_.isObject(module), 'Module was created');
+module('Base Module', {
+    baseModule : Ascot.createModule({
+        propA : 'hello',
+        propB : { enm : true, cfg : false, val : 5, wrt: true }
+    }),
+    desc : {
+        enumerable   : true,
+        configurable : false,
+        value        : 5,
+        writable     : true
+    }
+});
 
-    module.template = function() { return '<div class="test">Hello World!</div>'; };
-    module.element = document.getElementById('qunit');
+test('Module creation', function() {
 
-    ok($(module.element).hasClass('test'), 'Setting module element instantly instantiated the module');
+    ok(_.isObject(this.baseModule),
+        'Module was created');
 
-    module.remove();
+    equal(this.baseModule.propA,
+        'hello', 'Normal property was applied');
 
-    ok(!$(module.element).hasClass('test'), 'Removing the module restored the element to its original state');
+    deepEqual(
+        Object.getOwnPropertyDescriptor(this.baseModule, 'propB'),
+        this.desc,
+        'Descriptor property was applied');
+});
+
+/*****************************
+ *  Data/Element/Templating  *
+ *****************************/
+
+module('Data/Element/Templating', {
+    data     : { phrase : 'hello world!' },
+    template : function(data) { return '<div>' + data.phrase + '</div>'; },
+    module   : Ascot.createModule(),
+
+    setup : function() {
+        this.module.data = this.data;
+        this.module.template = this.template;
+        document.body.insertAdjacentHTML('beforeend', '<div id="test"></div>');
+        this.module.element = document.getElementById('test');
+    },
+
+    teardown : function() {
+        this.module.destroy();
+    }
+});
+
+test('Application', function(){
+
+    deepEqual(this.module.data, this.data,
+        'Data was set on module');
+
+    deepEqual(this.module.__element__, document.getElementById('test'),
+        'Element was set on module');
+
+    equal(document.getElementById('test').innerHTML, this.data.phrase,
+        'Template applied');
+});
+
+test('Removal', function() {
+    ok(document.getElementById('test'),
+        'Module exists');
+
+    this.module.destroy();
+
+    ok(!document.getElementById('test'),
+        'Module was destroyed');
+});
+
+/********************
+ *  Module Options  *
+ ********************/
+
+module('Module Options', {
+    options : { optA : true },
+    module : Ascot.createModule({
+        options : { optA : false }
+    }),
+
+    setup : function() {
+        this.module.options = this.options;
+        this.module.options = { optB : true };
+    }
+});
+
+test('Options application', function() {
+    equal(this.module.options.optA, true,
+        'Module options applied');
+    equal(this.module.options.optB, true,
+        'Module options updated');
+});
+
+/*******************
+ *  Data Updating  *
+ *******************/
+
+module('Data Updating', {
+    module : Ascot.createModule({
+        update : function() { this.didUpdate = true; }
+    }),
+    data : {
+        itemB : {
+            id : 'itemB',
+            itemC : {
+                id : 'itemC'
+            }
+
+        }
+    },
+
+    setup : function() {
+        this.module.data = this.data;
+        this.module.data = { '#itemC/value' : true };
+        this.module.data = { '#/itemB/value' : true };
+    }
+});
+
+test('Data updating', function() {
+    console.log(this.module.data);
+    equal(this.module.data.itemB.id, 'itemB',
+        'Additional data added to module data');
+    ok(this.module.data.itemB.itemC.value,
+        'Data updated using an addressed fragment');
+    ok(this.module.data.itemB.value,
+        'Data updated using a root-addressed fragment');
 
 });

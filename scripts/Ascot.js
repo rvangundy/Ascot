@@ -24,17 +24,7 @@
      *  Utilities  *
      ***************/
 
-    /**
-     * Takes a string of HTML and converts it to an actual DOM element
-     * @private
-     * @param  {String} htmlString An HTML string with a single root element
-     * @return {Element}           An HTML element
-     */
-    // function htmlStringToElement(htmlString) {
-    //     var div = document.createElement('div');
-    //     div.innerHTML = htmlString;
-    //     return div.children[0];
-    // }
+
 
     /*******************
      *  Ascot Methods  *

@@ -38,6 +38,15 @@ module.exports = function (grunt) {
                     base: '.'
                 }
             }
+        },
+        concat: {
+            options: {
+                separator: ';'
+            },
+            dist: {
+                src: ['scripts/ascot.js', 'scripts/module.js'],
+                dest: 'ascot.js'
+            }
         }
     });
 
@@ -49,6 +58,6 @@ module.exports = function (grunt) {
     grunt.registerTask('default', [
         'jshint',
         'test',
-        'jsdoc'
+        'concat'
     ]);
 };
