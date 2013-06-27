@@ -170,6 +170,44 @@
     }
 
     /**
+     * Extends a target object with items from a new object
+     * @param {Object}  target    The object to extend
+     * @param {Object}  obj       The object with new items
+     * @param {Boolean} overwrite If true, will overwrite existing properties on target
+     * @return {Object}        target
+     */
+    function deepExtend(target, obj, overwrite) {
+        var i;
+
+        // Copy a function
+        if (isFunction(obj)) {
+            if (overwrite && target) { target = obj; }
+            else if (target===undefined || target===null) { target = obj; }
+
+        // Recursively copy an array
+        } else if (Array.isArray(obj)) {
+            target = target || [];
+            for (i=0; i<obj.length; i+=1) {
+                target[i] = deepExtend(target[i], obj[i], overwrite);
+            }
+
+        // Recursively copy an object
+        } else if (isObject(obj)) {
+            target = target || {};
+            for (i in obj) {
+                target[i] = deepExtend(target[i], obj[i], overwrite);
+            }
+
+        // Copy all other types
+        } else {
+            if (overwrite && target) { target = obj; }
+            else if (target===undefined || target===null) { target = obj; }
+        }
+
+        return target;
+    }
+
+    /**
      * Retrieves parameters from the URL query string
      * @return {Object} An object containing all query parameters
      */
@@ -200,6 +238,7 @@
         isObject                : { value : isObject },
         htmlStringToElement     : { value : htmlStringToElement },
         deepCopy                : { value : deepCopy },
+        deepExtend              : { value : deepExtend },
         getQueryParameters      : { value : getQueryParameters }
 
     });
@@ -721,10 +760,10 @@
      */
     Ascot.registerBuild = function(name, settings) {
         /* jshint validthis : true, camelcase : false */
+        var variants = {};
         var build = Object.create({}, api);
 
-        build.variants = {};
-
+        // Sort settings from variants
         for (var i in settings) {
             // Copy settings over to build
             if (i in build) {
@@ -732,7 +771,16 @@
 
             // Copy variants
             } else {
-                build.variants[i] = settings[i];
+                variants[i] = settings[i];
+                delete settings[i];
+            }
+        }
+
+        // Register variants
+        for (var j in variants) {
+            if (Ascot.isObject(variants[j])) {
+                Ascot.deepExtend(variants[j], settings);
+                Ascot.registerBuild(name + ':' + j, variants[j]);
             }
         }
 
@@ -773,31 +821,31 @@
          * A module factory function used to generate this build
          * @type {Function}
          */
-        module : { val : null, wrt : true, enm : false, cfg : false },
+        module : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
          * The data reflected by this build
          * @type {Object}
          */
-        data : { val : null, wrt : true, enm : false, cfg : false },
+        data : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
          * Any special options particular to this build
          * @type {Object}
          */
-        options : { val : null, wrt : true, enm : false, cfg : false },
+        options : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
          * Submodules which should be instantiated as part of this build
          * @type {Object}
          */
-        submodules : { val : null, wrt : true, enm : false, cfg : false },
+        submodules : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
-         * Build variations which override module properties selectively
-         * @type {Object}
+         * A template to use; normally specified within the module
+         * @type {Function}
          */
-        variants : { val : null, wrt : true, enm : false, cfg : false }
+        template : { val : null, wrt : true, enm : true, cfg : false}
 
     });
 

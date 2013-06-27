@@ -154,6 +154,44 @@
     }
 
     /**
+     * Extends a target object with items from a new object
+     * @param {Object}  target    The object to extend
+     * @param {Object}  obj       The object with new items
+     * @param {Boolean} overwrite If true, will overwrite existing properties on target
+     * @return {Object}        target
+     */
+    function deepExtend(target, obj, overwrite) {
+        var i;
+
+        // Copy a function
+        if (isFunction(obj)) {
+            if (overwrite && target) { target = obj; }
+            else if (target===undefined || target===null) { target = obj; }
+
+        // Recursively copy an array
+        } else if (Array.isArray(obj)) {
+            target = target || [];
+            for (i=0; i<obj.length; i+=1) {
+                target[i] = deepExtend(target[i], obj[i], overwrite);
+            }
+
+        // Recursively copy an object
+        } else if (isObject(obj)) {
+            target = target || {};
+            for (i in obj) {
+                target[i] = deepExtend(target[i], obj[i], overwrite);
+            }
+
+        // Copy all other types
+        } else {
+            if (overwrite && target) { target = obj; }
+            else if (target===undefined || target===null) { target = obj; }
+        }
+
+        return target;
+    }
+
+    /**
      * Retrieves parameters from the URL query string
      * @return {Object} An object containing all query parameters
      */
@@ -184,6 +222,7 @@
         isObject                : { value : isObject },
         htmlStringToElement     : { value : htmlStringToElement },
         deepCopy                : { value : deepCopy },
+        deepExtend              : { value : deepExtend },
         getQueryParameters      : { value : getQueryParameters }
 
     });

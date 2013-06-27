@@ -78,10 +78,10 @@
      */
     Ascot.registerBuild = function(name, settings) {
         /* jshint validthis : true, camelcase : false */
+        var variants = {};
         var build = Object.create({}, api);
 
-        build.variants = {};
-
+        // Sort settings from variants
         for (var i in settings) {
             // Copy settings over to build
             if (i in build) {
@@ -89,7 +89,16 @@
 
             // Copy variants
             } else {
-                build.variants[i] = settings[i];
+                variants[i] = settings[i];
+                delete settings[i];
+            }
+        }
+
+        // Register variants
+        for (var j in variants) {
+            if (Ascot.isObject(variants[j])) {
+                Ascot.deepExtend(variants[j], settings);
+                Ascot.registerBuild(name + ':' + j, variants[j]);
             }
         }
 
@@ -130,31 +139,31 @@
          * A module factory function used to generate this build
          * @type {Function}
          */
-        module : { val : null, wrt : true, enm : false, cfg : false },
+        module : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
          * The data reflected by this build
          * @type {Object}
          */
-        data : { val : null, wrt : true, enm : false, cfg : false },
+        data : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
          * Any special options particular to this build
          * @type {Object}
          */
-        options : { val : null, wrt : true, enm : false, cfg : false },
+        options : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
          * Submodules which should be instantiated as part of this build
          * @type {Object}
          */
-        submodules : { val : null, wrt : true, enm : false, cfg : false },
+        submodules : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
-         * Build variations which override module properties selectively
-         * @type {Object}
+         * A template to use; normally specified within the module
+         * @type {Function}
          */
-        variants : { val : null, wrt : true, enm : false, cfg : false }
+        template : { val : null, wrt : true, enm : true, cfg : false}
 
     });
 

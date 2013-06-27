@@ -1,4 +1,4 @@
-/* global test, ok, equal, deepEqual, _, Ascot, Handlebars, $ */
+/* global test, ok, equal, deepEqual, _, Ascot */
 'use strict';
 
 // PhantomJS doesn't support bind yet
@@ -164,6 +164,9 @@ module('Build', {
     moduleB : Ascot({
         template : function() { return '<div>hello, sky!</div>'; }
     }),
+    moduleC : Ascot({
+        template : function() { return '<div>hello, ocean!</div>'; }
+    }),
     data : { prompt : 'hello, world!' },
 
     setup : function() {
@@ -174,11 +177,21 @@ module('Build', {
             data : this.data,
             submodules : {
                 '#test' : 'moduleB'
+            },
+
+            variantA : {
+                submodules : {
+                    '#test' : 'moduleC'
+                }
             }
         });
 
         Ascot.registerBuild('moduleB', {
             module : this.moduleB
+        });
+
+        Ascot.registerBuild('moduleC', {
+            module : this.moduleC
         });
 
         main('#main');
@@ -199,4 +212,14 @@ test('Build formation', function() {
 
     equal(document.getElementById('test').innerHTML, 'hello, sky!',
         'Submodule applied');
+});
+
+test('Build variant formation', function() {
+    ok(Ascot.builds['main:variantA'],
+        'Variant build added to collection');
+
+    Ascot.builds['main:variantA']('#main');
+
+    equal(document.getElementById('test').innerHTML, 'hello, ocean!',
+        'Variant submodule applied');
 });
