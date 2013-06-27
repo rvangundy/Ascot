@@ -54,14 +54,16 @@
      */
     function buildSubmodules(parent, selector, name) {
         /* jshint camelcase : false */
-        var build;
+        var build, elements;
         var subs = [];
 
         if (!Array.isArray(name)) { name = [name]; }
 
-        for (var i=0; i<name.length; i+=1) {
+        elements = parent.querySelectorAll(selector);
+
+        for (var i=0; i<elements.length; i+=1) {
             build = Ascot.__builds__[name[i]];
-            subs = subs.concat(build(parent, selector));
+            subs  = subs.concat(build(elements[i]));
         }
 
         return subs;
