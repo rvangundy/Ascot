@@ -62,6 +62,7 @@
         elements = parent.querySelectorAll(selector);
 
         for (var i=0; i<elements.length; i+=1) {
+            if (!name[i]) { break; }
             build = Ascot.__builds__[name[i]];
             subs  = subs.concat(build(elements[i]));
         }
