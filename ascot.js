@@ -169,6 +169,28 @@
         return copy;
     }
 
+    /**
+     * Retrieves parameters from the URL query string
+     * @return {Object} An object containing all query parameters
+     */
+    function getQueryParameters() {
+        var params,
+            match,
+            pl     = /\+/g,  // Regex for replacing addition symbol with a space
+            search = /([^&=]+)=?([^&]*)/g,
+            decode = function (s) { return decodeURIComponent(s.replace(pl, ' ')); },
+            query  = window.location.search.substring(1);
+
+        params = {};
+        match = search.exec(query);
+        while (match) {
+            params[decode(match[1])] = decode(match[2]);
+            match = search.exec(query);
+        }
+
+        return params;
+    }
+
     Object.defineProperties(Ascot, {
 
         isDescriptor            : { value : isDescriptor },
@@ -177,7 +199,8 @@
         isFunction              : { value : isFunction },
         isObject                : { value : isObject },
         htmlStringToElement     : { value : htmlStringToElement },
-        deepCopy                : { value : deepCopy }
+        deepCopy                : { value : deepCopy },
+        getQueryParameters      : { value : getQueryParameters }
 
     });
 
