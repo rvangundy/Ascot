@@ -68,17 +68,6 @@
     }
 
     /**
-     * A set of build functions that may be retrieved by name
-     * @type {Object}
-     */
-    Object.defineProperty(Ascot, '__builds__', {
-        value        : {},
-        writable     : false,
-        enumerable   : false,
-        configurable : false
-    });
-
-    /**
      * Registers a build with the Ascot library
      * @param  {String} name     The name of the build
      * @param  {Object} settings Settings for this build
@@ -105,6 +94,28 @@
 
         return this.__builds__[name];
     };
+
+    /**
+     * A set of build functions that may be retrieved by name
+     * @type {Object}
+     */
+    Object.defineProperty(Ascot, '__builds__', {
+        value        : {},
+        writable     : false,
+        enumerable   : false,
+        configurable : false
+    });
+
+    /**
+     * A set of build functions that may be retrieved by name
+     * @type {Object}
+     */
+    /* jshint camelcase : false */
+    Object.defineProperty(Ascot, 'builds', {
+        enumerable   : false,
+        configurable : false,
+        get : function() { return this.__builds__; }
+    });
 
     /******************
      *  External API  *
