@@ -60,13 +60,15 @@
      */
     function attach(element) {
         /* jshint validthis : true, camelcase : false */
+        if (!element) { return this; }
+
         var newElement;
         var parent = element.parentNode;
 
         if (parent) {
 
             // Create the new element using the module's template
-            this.__element__ = newElement = htmlStringToElement(this.template(this.data));
+            this.__element__ = newElement = Ascot.htmlStringToElement(this.template(this.data));
 
             // Replace element in DOM with new module element
             this.__previousElement__ = parent.replaceChild(newElement, element);
@@ -128,6 +130,8 @@
         // Convert a JSON string to an object
         if (typeof newData === 'string') {
             newData = JSON.parse(newData);
+        } else if (!newData) {
+            return;
         }
 
         // If data is an ID reference, set its data directly
@@ -142,6 +146,7 @@
 
         // Call custom update method
         if (this.update) { this.update(data); }
+        else if (this.template) { this.element = this.template(data); }
 
         return data;
     }
@@ -154,8 +159,8 @@
      */
     function mergeData(data, newData) {
         for (var i in newData) {
-            if (isObject(newData[i])) {
-                data[i] = isObject(data[i]) ? data[i] : {};
+            if (Ascot.isObject(newData[i])) {
+                data[i] = Ascot.isObject(data[i]) ? data[i] : {};
                 data[i] = mergeData(data[i], newData[i]);
             } else {
                 data[i] = newData[i];
@@ -227,7 +232,7 @@
 
         // Recursively attempt to find an item with the specified id
         for (var i in data) {
-            if (isObject(data[i])) {
+            if (Ascot.isObject(data[i])) {
                 if (data[i].id === id) { return data[i]; }
                 item = getItemByID(data[i], id);
                 if (item && item.id === id) { return item; }
@@ -246,205 +251,65 @@
      * descriptor and the descriptor passed as a parameter to the
      * createModule method.
      * @param  {Object} desc A descriptor to use as the basis for the module
-     * @return {Module}      The new module
+     * @return {Function}    A factory function used to create a module instance
      */
     Ascot.createModule = function(desc) {
-        var copy, module, prop;
-        var newDescriptor = deepCopy(api);
+        var copy, priv;
+        var newDescriptor = Ascot.deepCopy(api);
 
         desc = desc || {};
 
         // Creates a single compiled descriptor
         for (var i in desc) {
-            prop = (i === 'data') ? '__data__' : i;
-
-            copy = deepCopy(desc[prop]);
+            copy = Ascot.deepCopy(desc[i]);
 
             // Sets values for existing module API properties
-            if (prop in newDescriptor) {
-                if ('value' in newDescriptor[prop]) {
-                    if (isDescriptor(copy)) {
-                        newDescriptor[prop] = copy;
+            if (i in newDescriptor) {
+                priv = '__' + i + '__';
+
+                // Set the value of the property
+                if ('value' in newDescriptor[i]) {
+                    if (Ascot.isDescriptor(copy)) {
+                        newDescriptor[i] = copy;
                     } else {
-                        newDescriptor[prop].value = copy;
+                        newDescriptor[i].value = copy;
+                    }
+
+                // Set the private alternative to the value
+                } else if (priv in newDescriptor) {
+                    if (Ascot.isDescriptor(copy)) {
+                        newDescriptor[priv] = copy;
+                    } else {
+                        newDescriptor[priv].value = copy;
                     }
                 }
 
             // Adds new properties to the API
             } else {
-                if (isDescriptor(copy)) {
-                    newDescriptor[prop] = expandDescriptor(copy);
+                if (Ascot.isDescriptor(copy)) {
+                    newDescriptor[i] = Ascot.expandDescriptor(copy);
                 } else {
-                    newDescriptor[prop] = createDefaultDescriptor(copy);
+                    newDescriptor[i] = Ascot.createDefaultDescriptor(copy);
                 }
             }
         }
 
-        // Creates the module
-        module = Object.create({}, newDescriptor);
+        return function(element, data, options) {
+            var module = Object.create({}, newDescriptor);
 
-        // Sets options on the module
-        if (desc.options) { module.options = desc.options; }
+            module.data    = data;
+            module.options = options;
+            module.element = element;
 
-        return module;
-    };
-
-    /*****************
-     *  Descriptors  *
-     *****************/
-
-    /**
-     * Determines if an object is a valid descriptor
-     * @param  {Object}  obj A proposed descriptor
-     * @return {Boolean}     True if obj is a descriptor
-     */
-    function isDescriptor(obj) {
-        if (obj === Object(obj)) {
-            if ('value' in obj ||
-                'writable' in obj ||
-                'configurable' in obj ||
-                'enumerable' in obj ||
-                'get' in obj ||
-                'set' in obj ||
-                'val' in obj ||
-                'wrt' in obj ||
-                'cfg' in obj ||
-                'enm' in obj) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Expands the descriptor properties from their shorthand names
-     * to the formal names.
-     * @param  {Object} desc A descriptor object
-     * @return {Object}      desc
-     */
-    function expandDescriptor(desc) {
-
-        // Recursively expand until a descriptor is found
-        if (!isDescriptor(desc)) {
-            for (var i in desc) {
-                desc[i] = expandDescriptor(desc[i]);
-            }
-        }
-
-        if ('val' in desc) {
-            desc.value = desc.val;
-            delete desc.val;
-        }
-
-        if ('wrt' in desc) {
-            desc.writable = desc.wrt;
-            delete desc.wrt;
-        }
-
-        if ('cfg' in desc) {
-            desc.configurable = desc.cfg;
-            delete desc.cfg;
-        }
-
-        if ('enm' in desc) {
-            desc.enumerable = desc.enm;
-            delete desc.enm;
-        }
-
-        return desc;
-    }
-
-    /**
-     * Creates a default descriptor corresponding to a value.  By default,
-     * properties are set to non-enumerable.
-     * @param  {Variant} value Any value
-     * @return {Object}        A default descriptor
-     */
-    function createDefaultDescriptor(value) {
-        return {
-            value        : value,
-            writable     : true,
-            configurable : true,
-            enumerable   : false
+            return module;
         };
-    }
-
-    /***********************
-     *  Utility Functions  *
-     ***********************/
-
-    /**
-     * Determines if the target is a function
-     * @param  {Object} obj An object to test
-     * @return {Boolean}    True if obj is a function
-     */
-    function isFunction(obj) {
-        return Object.prototype.toString.call(obj) === '[object Function]';
-    }
-
-    /**
-     * Determine if an object is an object
-     * @param  {Object}  obj The object to check
-     * @return {Boolean}     True if obj is an object
-     */
-    function isObject(obj) {
-        return obj === Object(obj);
-    }
-
-    /**
-     * Takes a string of HTML and converts it to an actual DOM element
-     * @private
-     * @param  {String} htmlString An HTML string with a single root element
-     * @return {Element}           An HTML element
-     */
-    function htmlStringToElement(htmlString) {
-        var div = document.createElement('div');
-        div.innerHTML = htmlString;
-        return div.children[0];
-    }
-
-    /**
-     * Performs a recursive copy of any data.  All data as
-     * well as child data is returned by value rather than
-     * by reference.
-     * @param  {Variant} obj The data to copy
-     * @return {Variant}     A new copy of the data
-     */
-    function deepCopy(obj) {
-        var copy, i;
-
-        // Copy a function
-        if (isFunction(obj)) {
-            copy = obj;
-
-        // Recursively copy an object
-        } else if (isObject(obj)) {
-            copy = {};
-            for (i in obj) {
-                copy[i] = deepCopy(obj[i]);
-            }
-
-        // Recursively copy an array
-        } else if (Array.isArray(obj)) {
-            copy = [];
-            for (i=0; i<obj.length; i+=1) {
-                copy[i] = deepCopy(obj[i]);
-            }
-
-        // Copy all other types
-        } else {
-            copy = obj;
-        }
-
-        return copy;
-    }
+    };
 
     /******************
      *  API Settings  *
      ******************/
 
-    var api = expandDescriptor({
+    var api = Ascot.expandDescriptor({
 
         /* jshint camelcase: false */
 
@@ -482,6 +347,12 @@
          * @type {Function}
          */
         shutdown : { val : null, wrt : false, cfg : false, enm : false },
+
+        /**
+         * A list of all submodules under this module
+         * @type {Array}
+         */
+        submodules : { val : [], wrt : true, cfg : false, enm : false },
 
         /*************
          *  Methods  *

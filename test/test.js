@@ -30,14 +30,16 @@ module('Base Module', {
 
 test('Module creation', function() {
 
-    ok(_.isObject(this.baseModule),
+    var mod = this.baseModule();
+
+    ok(_.isObject(mod),
         'Module was created');
 
-    equal(this.baseModule.propA,
+    equal(mod.propA,
         'hello', 'Normal property was applied');
 
     deepEqual(
-        Object.getOwnPropertyDescriptor(this.baseModule, 'propB'),
+        Object.getOwnPropertyDescriptor(mod, 'propB'),
         this.desc,
         'Descriptor property was applied');
 });
@@ -48,14 +50,14 @@ test('Module creation', function() {
 
 module('Data/Element/Templating', {
     data     : { phrase : 'hello world!' },
-    template : function(data) { return '<div>' + data.phrase + '</div>'; },
-    module   : Ascot.createModule(),
+    module   : Ascot.createModule({
+        template : function(data) { return '<div>' + data.phrase + '</div>'; }
+    }),
 
     setup : function() {
-        this.module.data = this.data;
-        this.module.template = this.template;
         document.body.insertAdjacentHTML('beforeend', '<div id="test"></div>');
-        this.module.element = document.getElementById('test');
+        this.module.template = this.template;
+        this.module = this.module(document.getElementById('test'), this.data);
     },
 
     teardown : function() {
@@ -96,6 +98,7 @@ module('Module Options', {
     }),
 
     setup : function() {
+        this.module = this.module();
         this.module.options = this.options;
         this.module.options = { optB : true };
     }
@@ -114,20 +117,20 @@ test('Options application', function() {
 
 module('Data Updating', {
     module : Ascot.createModule({
-        update : function() { this.didUpdate = true; }
-    }),
-    data : {
-        itemB : {
-            id : 'itemB',
-            itemC : {
-                id : 'itemC'
-            }
+        update : function() { this.didUpdate = true; },
+        data : {
+            itemB : {
+                id : 'itemB',
+                itemC : {
+                    id : 'itemC'
+                }
 
+            }
         }
-    },
+    }),
 
     setup : function() {
-        this.module.data = this.data;
+        this.module = this.module();
         this.module.data = { '#itemC/value' : true };
         this.module.data = { '#/itemB/value' : true };
     }
