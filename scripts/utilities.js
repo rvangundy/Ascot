@@ -131,17 +131,17 @@
         if (isFunction(obj)) {
             copy = obj;
 
-        // Recursively copy an object
-        } else if (isObject(obj)) {
-            copy = {};
-            for (i in obj) {
-                copy[i] = deepCopy(obj[i]);
-            }
-
         // Recursively copy an array
         } else if (Array.isArray(obj)) {
             copy = [];
             for (i=0; i<obj.length; i+=1) {
+                copy[i] = deepCopy(obj[i]);
+            }
+
+        // Recursively copy an object
+        } else if (isObject(obj)) {
+            copy = {};
+            for (i in obj) {
                 copy[i] = deepCopy(obj[i]);
             }
 

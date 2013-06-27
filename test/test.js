@@ -1,6 +1,14 @@
 /* global test, ok, equal, deepEqual, _, Ascot, Handlebars, $ */
 'use strict';
 
+// PhantomJS doesn't support bind yet
+Function.prototype.bind = Function.prototype.bind || function (thisp) {
+    var fn = this;
+    return function () {
+        return fn.apply(thisp, arguments);
+    };
+};
+
 /*********************
  *  Framework Setup  *
  *********************/
@@ -137,12 +145,58 @@ module('Data Updating', {
 });
 
 test('Data updating', function() {
-    console.log(this.module.data);
     equal(this.module.data.itemB.id, 'itemB',
         'Additional data added to module data');
     ok(this.module.data.itemB.itemC.value,
         'Data updated using an addressed fragment');
     ok(this.module.data.itemB.value,
         'Data updated using a root-addressed fragment');
+});
 
+/*********************
+ *  Build Formation  *
+ *********************/
+
+module('Build', {
+    moduleA : Ascot({
+        template : function(data) { return '<div><div id="test">' + data.prompt + '</div></div>'; }
+    }),
+    moduleB : Ascot({
+        template : function() { return '<div>hello, sky!</div>'; }
+    }),
+    data : { prompt : 'hello, world!' },
+
+    setup : function() {
+        document.body.insertAdjacentHTML('beforeend', '<div id="main"></div>');
+
+        var main = Ascot.registerBuild('main', {
+            module : this.moduleA,
+            data : this.data,
+            submodules : {
+                '#test' : 'moduleB'
+            }
+        });
+
+        Ascot.registerBuild('moduleB', {
+            module : this.moduleB
+        });
+
+        main('#main');
+    },
+
+    teardown : function() {
+        var test = document.getElementById('main');
+        document.body.removeChild(test);
+    }
+});
+
+test('Build formation', function() {
+    ok(document.getElementById('main'),
+        'Test div added to body');
+
+    ok(document.getElementById('test'),
+        'Module template applied');
+
+    equal(document.getElementById('test').innerHTML, 'hello, sky!',
+        'Submodule applied');
 });

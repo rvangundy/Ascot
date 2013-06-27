@@ -34,11 +34,11 @@
             modules.push(module);
 
             // Build submodules
-            if (selector.submodules) {
-                sub = selector.submodules;
+            if (this.submodules) {
+                sub = this.submodules;
 
                 for (var j in sub) {
-                    module.submodules.concat(buildSubmodules(element, j, sub[j]));
+                    module.submodules = module.submodules.concat(buildSubmodules(module.element, j, sub[j]));
                 }
             }
         }
@@ -92,7 +92,7 @@
 
         for (var i in settings) {
             // Copy settings over to build
-            if (build[i]) {
+            if (i in build) {
                 build[i] = settings[i];
 
             // Copy variants

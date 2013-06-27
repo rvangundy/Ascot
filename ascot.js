@@ -147,17 +147,17 @@
         if (isFunction(obj)) {
             copy = obj;
 
-        // Recursively copy an object
-        } else if (isObject(obj)) {
-            copy = {};
-            for (i in obj) {
-                copy[i] = deepCopy(obj[i]);
-            }
-
         // Recursively copy an array
         } else if (Array.isArray(obj)) {
             copy = [];
             for (i=0; i<obj.length; i+=1) {
+                copy[i] = deepCopy(obj[i]);
+            }
+
+        // Recursively copy an object
+        } else if (isObject(obj)) {
+            copy = {};
+            for (i in obj) {
                 copy[i] = deepCopy(obj[i]);
             }
 
@@ -654,11 +654,11 @@
             modules.push(module);
 
             // Build submodules
-            if (selector.submodules) {
-                sub = selector.submodules;
+            if (this.submodules) {
+                sub = this.submodules;
 
                 for (var j in sub) {
-                    module.submodules.concat(buildSubmodules(element, j, sub[j]));
+                    module.submodules = module.submodules.concat(buildSubmodules(module.element, j, sub[j]));
                 }
             }
         }
@@ -712,7 +712,7 @@
 
         for (var i in settings) {
             // Copy settings over to build
-            if (build[i]) {
+            if (i in build) {
                 build[i] = settings[i];
 
             // Copy variants
