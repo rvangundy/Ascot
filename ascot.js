@@ -325,7 +325,7 @@
 
             // Initialize the module
             if (this.initialize) {
-                this.initialize(newElement, newElement.data, newElement.options);
+                this.initialize(newElement, this.data, this.options);
             }
         }
 
