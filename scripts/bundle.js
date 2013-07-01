@@ -9,7 +9,7 @@
      * @param  {String} selector A selector used to determine elements
      * @return {Array}           An array of newly built modules
      */
-    function runBuild(element, selector) {
+    function deployBundle(element, selector) {
         /* jshint validthis : true */
         var elements, module, sub;
         var modules = [];
@@ -38,7 +38,7 @@
                 sub = this.submodules;
 
                 for (var j in sub) {
-                    module.submodules = module.submodules.concat(buildSubmodules(module.element, j, sub[j]));
+                    module.submodules = module.submodules.concat(deploySubmodules(module.element, j, sub[j]));
                 }
             }
         }
@@ -59,7 +59,7 @@
      * @param  {String}  selector A selector query string used to determine where to assign modules
      * @param  {String|Array} name The name or names of builds to use as submodules
      */
-    function buildSubmodules(parent, selector, name) {
+    function deploySubmodules(parent, selector, name) {
         /* jshint camelcase : false */
         var build, elements;
         var subs = [];
@@ -71,7 +71,7 @@
 
         for (var i=0; i<elements.length; i+=1) {
             if (!name[i]) { break; }
-            build = Ascot.__builds__[name[i]];
+            build = Ascot.__bundles__[name[i]];
             subs  = subs.concat(build(elements[i]));
         }
 
@@ -84,7 +84,7 @@
      * @param  {Object} settings Settings for this build
      * @return {Function}        A factory function that applies a build to elements
      */
-    Ascot.registerBuild = function(name, settings) {
+    Ascot.registerBundle = function(name, settings) {
         /* jshint validthis : true, camelcase : false */
         var variants = {};
         var build = Object.create({}, api);
@@ -106,20 +106,20 @@
         for (var j in variants) {
             if (Ascot.isObject(variants[j])) {
                 Ascot.deepExtend(variants[j], settings);
-                Ascot.registerBuild(name + ':' + j, variants[j]);
+                Ascot.registerBundle(name + ':' + j, variants[j]);
             }
         }
 
-        this.__builds__[name] = runBuild.bind(build);
+        this.__bundles__[name] = deployBundle.bind(build);
 
-        return this.__builds__[name];
+        return this.__bundles__[name];
     };
 
     /**
-     * A set of build functions that may be retrieved by name
+     * A set of bundle functions that may be retrieved by name
      * @type {Object}
      */
-    Object.defineProperty(Ascot, '__builds__', {
+    Object.defineProperty(Ascot, '__bundles__', {
         value        : {},
         writable     : false,
         enumerable   : false,
@@ -131,10 +131,10 @@
      * @type {Object}
      */
     /* jshint camelcase : false */
-    Object.defineProperty(Ascot, 'builds', {
+    Object.defineProperty(Ascot, 'bundles', {
         enumerable   : false,
         configurable : false,
-        get : function() { return this.__builds__; }
+        get : function() { return this.__bundles__; }
     });
 
     /******************
@@ -171,7 +171,7 @@
          * A template to use; normally specified within the module
          * @type {Function}
          */
-        template : { val : null, wrt : true, enm : true, cfg : false}
+        template : { val : null, wrt : true, enm : true, cfg : false }
 
     });
 

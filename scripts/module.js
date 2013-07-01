@@ -58,7 +58,7 @@
      * Applies the module to specified DOM element
      * @param  {Element} element An element on which to apply a module
      */
-    function attach(element) {
+    function deploy(element) {
         /* jshint validthis : true, camelcase : false */
         if (!element) { return this; }
 
@@ -367,7 +367,7 @@
             enm : false,
             cfg : false,
             get : function() { return this.__element__; },
-            set : function(element) { attach.call(this, element); }
+            set : function(element) { deploy.call(this, element); }
         },
 
         /**

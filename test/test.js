@@ -154,10 +154,10 @@ test('Data updating', function() {
 });
 
 /*********************
- *  Build Formation  *
+ *  Bundle Formation  *
  *********************/
 
-module('Build', {
+module('Bundle', {
     moduleA : Ascot({
         template : function(data) { return '<div><div id="test">' + data.prompt + '</div></div>'; }
     }),
@@ -172,7 +172,7 @@ module('Build', {
     setup : function() {
         document.body.insertAdjacentHTML('beforeend', '<div id="main"></div>');
 
-        var main = Ascot.registerBuild('main', {
+        var main = Ascot.registerBundle('main', {
             module : this.moduleA,
             data : this.data,
             submodules : {
@@ -186,11 +186,11 @@ module('Build', {
             }
         });
 
-        Ascot.registerBuild('moduleB', {
+        Ascot.registerBundle('moduleB', {
             module : this.moduleB
         });
 
-        Ascot.registerBuild('moduleC', {
+        Ascot.registerBundle('moduleC', {
             module : this.moduleC
         });
 
@@ -203,7 +203,7 @@ module('Build', {
     }
 });
 
-test('Build formation', function() {
+test('Bundle formation', function() {
     ok(document.getElementById('main'),
         'Test div added to body');
 
@@ -215,10 +215,10 @@ test('Build formation', function() {
 });
 
 test('Build variant formation', function() {
-    ok(Ascot.builds['main:variantA'],
+    ok(Ascot.bundles['main:variantA'],
         'Variant build added to collection');
 
-    Ascot.builds['main:variantA']('#main');
+    Ascot.bundles['main:variantA']('#main');
 
     equal(document.getElementById('test').innerHTML, 'hello, ocean!',
         'Variant submodule applied');
