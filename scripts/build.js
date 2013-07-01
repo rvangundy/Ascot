@@ -43,6 +43,13 @@
             }
         }
 
+        // Initialize all modules
+        for (var k=0; k<modules.length; k+=1) {
+            if (modules[k].initialize) {
+                modules[k].initialize(modules[k].element, this.data, this.options);
+            }
+        }
+
         return modules;
     }
 

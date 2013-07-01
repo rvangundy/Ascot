@@ -76,11 +76,6 @@
             // Merge IDs and classes
             newElement.id = element.id;
             newElement.className = mergeClassLists(newElement.className, element.className);
-
-            // Initialize the module
-            if (this.initialize) {
-                this.initialize(newElement, this.data, this.options);
-            }
         }
 
         return this;

@@ -322,11 +322,6 @@
             // Merge IDs and classes
             newElement.id = element.id;
             newElement.className = mergeClassLists(newElement.className, element.className);
-
-            // Initialize the module
-            if (this.initialize) {
-                this.initialize(newElement, this.data, this.options);
-            }
         }
 
         return this;
@@ -722,6 +717,13 @@
                 for (var j in sub) {
                     module.submodules = module.submodules.concat(buildSubmodules(module.element, j, sub[j]));
                 }
+            }
+        }
+
+        // Initialize all modules
+        for (var k=0; k<modules.length; k+=1) {
+            if (modules[k].initialize) {
+                modules[k].initialize(modules[k].element, this.data, this.options);
             }
         }
 
