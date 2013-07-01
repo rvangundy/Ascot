@@ -66,6 +66,7 @@
 
         if (!Array.isArray(name)) { name = [name]; }
 
+        // Get specified elements from parent
         elements = parent.querySelectorAll(selector);
 
         for (var i=0; i<elements.length; i+=1) {
