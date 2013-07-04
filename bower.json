@@ -1,16 +1,7 @@
 {
   "name": "ascot",
-  "version": "0.0.9",
-  "dependencies": {
-    "jquery": "~2.0.2",
-    "handlebars": "~1.0.0",
-    "requirejs-handlebars": "git://github.com/jfparadis/requirejs-handlebars.git",
-    "underscore": "~1.4.4",
-    "qunit": "~1.11.0",
-    "requirejs": "~2.1.6",
-    "requirejs-domready": "~2.0.1"
-  },
+  "version": "0.0.10",
   "devDependencies": {
-    "requirejs-text": "~2.0.7"
+    "qunit": "~1.11.0"
   }
 }
