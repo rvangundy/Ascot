@@ -74,7 +74,7 @@
             this.__previousElement__ = parent.replaceChild(newElement, element);
 
             // Merge IDs and classes
-            newElement.id = element.id;
+            newElement.id = this.id || newElement.id || element.id;
             newElement.className = Ascot.mergeClassLists(newElement.className, element.className);
         }
 

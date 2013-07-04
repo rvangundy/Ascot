@@ -16,7 +16,7 @@ Function.prototype.bind = Function.prototype.bind || function (thisp) {
 module('Setup');
 
 test('Ascot', function() {
-    ok(_.isFunction(Ascot), 'Ascot is a function in the global space');
+    ok(typeof Ascot === 'function', 'Ascot is a function in the global space');
 });
 
 /***************************
@@ -40,7 +40,7 @@ test('Module creation', function() {
 
     var mod = this.baseModule();
 
-    ok(_.isObject(mod),
+    ok(mod === Object(mod),
         'Module was created');
 
     equal(mod.propA,
@@ -174,6 +174,7 @@ module('Bundle', {
 
         var main = Ascot.registerBundle('main', {
             module : this.moduleA,
+            id : 'test',
             data : this.data,
             submodules : {
                 '#test' : 'moduleB',
@@ -224,6 +225,9 @@ test('Bundle formation', function() {
 
     equal(document.getElementById('test2').innerHTML, 'hello, world!',
         'Template submodule applied');
+
+    equal(document.getElementById('test').id, 'test',
+        'ID copied');
 });
 
 test('Bundle variant formation', function() {
