@@ -68,7 +68,7 @@
      * @param  {String|Array} name The name or names of builds to use as submodules
      */
     function deploySubmodules(parent, selector, name) {
-        /* jshint camelcase : false */
+        /* jshint camelcase : false, loopfunc : true */
         var bundle, elements;
         var subs = [];
 
@@ -80,8 +80,25 @@
         // Deploy submodules to each element
         for (var i=0; i<elements.length; i+=1) {
             if (!name[i]) { break; }
-            bundle = Ascot.__bundles__[name[i]];
-            subs   = subs.concat(bundle(elements[i]));
+
+            // Deploy template-based submodule
+            if (Ascot.isObject(name[i])) {
+                bundle = (function(template, data) {
+                    return function(element) {
+                        return deployTemplate(element, template, data);
+                    };
+                }(name[i].template, name[i].data));
+
+            // Deploy a bundle-referenced submodule
+            } else if (typeof name[i] === 'string') {
+                bundle = Ascot.__bundles__[name[i]];
+
+            // Do nothing for invalid items
+            } else {
+                continue;
+            }
+
+            subs = subs.concat(bundle(elements[i]));
         }
 
         return subs;

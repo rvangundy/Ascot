@@ -159,7 +159,7 @@ test('Data updating', function() {
 
 module('Bundle', {
     moduleA : Ascot({
-        template : function(data) { return '<div><div id="test">' + data.prompt + '</div></div>'; }
+        template : function(data) { return '<div><div id="test">' + data.prompt + '</div><div id="test2"></div></div>'; }
     }),
     moduleB : Ascot({
         template : function() { return '<div>hello, sky!</div>'; }
@@ -176,7 +176,11 @@ module('Bundle', {
             module : this.moduleA,
             data : this.data,
             submodules : {
-                '#test' : 'moduleB'
+                '#test' : 'moduleB',
+                '#test2' : {
+                    template : function(data) { return '<div>' + data.prompt + '</div>'; },
+                    data     : this.data
+                }
             },
 
             variantA : {
@@ -217,6 +221,9 @@ test('Bundle formation', function() {
 
     equal(document.getElementById('test').innerHTML, 'hello, sky!',
         'Submodule applied');
+
+    equal(document.getElementById('test2').innerHTML, 'hello, world!',
+        'Template submodule applied');
 });
 
 test('Bundle variant formation', function() {
