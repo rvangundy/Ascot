@@ -194,6 +194,11 @@ module('Bundle', {
             module : this.moduleC
         });
 
+        Ascot.registerBundle('templateA', {
+            template : function(data) { return '<div>' + data.prompt + '</div>'; },
+            data     : this.data
+        });
+
         main('#main');
     },
 
@@ -214,12 +219,22 @@ test('Bundle formation', function() {
         'Submodule applied');
 });
 
-test('Build variant formation', function() {
+test('Bundle variant formation', function() {
     ok(Ascot.bundles['main:variantA'],
-        'Variant build added to collection');
+        'Variant bundle added to collection');
 
     Ascot.bundles['main:variantA']('#main');
 
     equal(document.getElementById('test').innerHTML, 'hello, ocean!',
         'Variant submodule applied');
+});
+
+test('Bundle formation with template only', function() {
+    ok(Ascot.bundles.templateA,
+        'Template bundle added to collection');
+
+    Ascot.bundles.templateA('#main');
+
+    equal(document.getElementById('main').innerHTML, 'hello, world!',
+        'Template applied');
 });
