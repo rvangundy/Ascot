@@ -44,7 +44,7 @@ module.exports = function (grunt) {
                 separator: ';'
             },
             dist: {
-                src: ['scripts/ascot.js','scripts/utilities.js','scripts/module.js','scripts/build.js'],
+                src: ['scripts/ascot.js','scripts/utilities.js','scripts/module.js','scripts/bundle.js'],
                 dest: 'ascot.js'
             }
         }
