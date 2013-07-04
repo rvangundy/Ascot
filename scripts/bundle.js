@@ -30,8 +30,16 @@
         // Create modules and attach to each element
         for (var i=0; i<elements.length; i+=1) {
             element = elements[i];
-            module = this.module(element, this.data, this.options);
-            modules.push(module);
+
+            // Deploy as a module
+            if (this.module) {
+                module  = this.module(element, this.data, this.options);
+                modules.push(module);
+
+            // Deploy as a template
+            } else if (this.template) {
+                deployTemplate(element, this.template, this.data);
+            }
 
             // Build submodules
             if (this.submodules) {
@@ -61,7 +69,7 @@
      */
     function deploySubmodules(parent, selector, name) {
         /* jshint camelcase : false */
-        var build, elements;
+        var bundle, elements;
         var subs = [];
 
         if (!Array.isArray(name)) { name = [name]; }
@@ -69,13 +77,33 @@
         // Get specified elements from parent
         elements = parent.querySelectorAll(selector);
 
+        // Deploy submodules to each element
         for (var i=0; i<elements.length; i+=1) {
             if (!name[i]) { break; }
-            build = Ascot.__bundles__[name[i]];
-            subs  = subs.concat(build(elements[i]));
+            bundle = Ascot.__bundles__[name[i]];
+            subs   = subs.concat(bundle(elements[i]));
         }
 
         return subs;
+    }
+
+    /**
+     * Deploys a template on to target.  Usually used in the absence of a module.
+     * @param  {Element}  element   The element to replace with the template
+     * @param  {Function} tempalate A templating function
+     * @param  {Object}   data      Data used to populate the template
+     * @return {Element}            The new element
+     */
+    function deployTemplate(element, template, data) {
+        var parent     = element.parentNode;
+        var newElement = Ascot.htmlStringToElement(template(data || {}));
+
+        parent.replaceChild(newElement, element);
+
+        newElement.id = element.id || newElement.id;
+        newElement.className = Ascot.mergeClassLists(newElement.className, element.className);
+
+        return newElement;
     }
 
     /**

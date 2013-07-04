@@ -229,6 +229,32 @@
         return params;
     }
 
+    /**
+     * Merges together two lists of classes in to a single class list
+     * @param  {String} classListA A space-separated list of class names
+     * @param  {String} classListB A space-separated list of class names
+     * @return {String}            A merged list of class names
+     */
+    function mergeClassLists(classListA, classListB) {
+        var newList;
+        var name;
+
+        classListA = classListA.split(' ');
+        classListB = classListB.split(' ');
+
+        newList = [].concat(classListA);
+
+        for (var i=0; i<classListB.length; i+=1) {
+            name = classListB[i];
+
+            if (newList.indexOf(name) < 0) {
+                newList.push(name);
+            }
+        }
+
+        return newList.join(' ').trim();
+    }
+
     Object.defineProperties(Ascot, {
 
         isDescriptor            : { value : isDescriptor },
@@ -239,8 +265,8 @@
         htmlStringToElement     : { value : htmlStringToElement },
         deepCopy                : { value : deepCopy },
         deepExtend              : { value : deepExtend },
-        getQueryParameters      : { value : getQueryParameters }
-
+        getQueryParameters      : { value : getQueryParameters },
+        mergeClassLists         : { value : mergeClassLists }
     });
 
 }(this||window));
@@ -321,36 +347,10 @@
 
             // Merge IDs and classes
             newElement.id = element.id;
-            newElement.className = mergeClassLists(newElement.className, element.className);
+            newElement.className = Ascot.mergeClassLists(newElement.className, element.className);
         }
 
         return this;
-    }
-
-    /**
-     * Merges together two lists of classes in to a single class list
-     * @param  {String} classListA A space-separated list of class names
-     * @param  {String} classListB A space-separated list of class names
-     * @return {String}            A merged list of class names
-     */
-    function mergeClassLists(classListA, classListB) {
-        var newList;
-        var name;
-
-        classListA = classListA.split(' ');
-        classListB = classListB.split(' ');
-
-        newList = [].concat(classListA);
-
-        for (var i=0; i<classListB.length; i+=1) {
-            name = classListB[i];
-
-            if (newList.indexOf(name) < 0) {
-                newList.push(name);
-            }
-        }
-
-        return newList.join(' ').trim();
     }
 
     /*******************
