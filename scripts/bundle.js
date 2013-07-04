@@ -33,7 +33,12 @@
 
             // Deploy as a module
             if (this.module) {
-                module  = this.module(element, this.data, this.options);
+                module  = this.module(element, {
+                    data     : this.data,
+                    options  : this.options,
+                    id       : this.id
+                });
+
                 modules.push(module);
 
             // Deploy as a template
@@ -187,6 +192,12 @@
      ******************/
 
     var api = Ascot.expandDescriptor({
+
+        /**
+         * An optional ID to associate with a single-target bundle/module.
+         * @type {String}
+         */
+        id : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
          * A module factory function used to generate this build

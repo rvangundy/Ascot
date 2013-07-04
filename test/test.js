@@ -65,7 +65,7 @@ module('Data/Element/Templating', {
     setup : function() {
         document.body.insertAdjacentHTML('beforeend', '<div id="test"></div>');
         this.module.template = this.template;
-        this.module = this.module(document.getElementById('test'), this.data);
+        this.module = this.module(document.getElementById('test'), { data : this.data });
     },
 
     teardown : function() {
@@ -174,7 +174,6 @@ module('Bundle', {
 
         var main = Ascot.registerBundle('main', {
             module : this.moduleA,
-            id : 'test',
             data : this.data,
             submodules : {
                 '#test' : 'moduleB',
