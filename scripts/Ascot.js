@@ -8,7 +8,7 @@
      * @return {Function}    A factory function that creates a module
      */
     var Ascot = function(desc) {
-        return Ascot.createModule(desc);
+        return Ascot.defineModule(desc);
     };
 
     window.Ascot = Ascot;
