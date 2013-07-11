@@ -69,7 +69,7 @@
 
         // Initialize the module
         if (module.initialize) {
-            module.initialize(element, this.settings.data, this.settings.options);
+            module.initialize(target, this.settings.data, this.settings.options);
         }
 
         return module;
