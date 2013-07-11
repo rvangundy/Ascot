@@ -186,7 +186,7 @@
 
         newList = newList.join(' ').trim();
 
-        return newList === '' ? undefined : newList.join(' ').trim();
+        return newList === '' ? undefined : newList;
     }
 
     /*************************
