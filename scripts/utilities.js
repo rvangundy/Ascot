@@ -83,9 +83,9 @@
         };
     }
 
-    /***********************
-     *  Utility Functions  *
-     ***********************/
+    /********************
+     *  Type Utilities  *
+     ********************/
 
     /**
      * Determines if the target is a function
@@ -105,6 +105,10 @@
         return obj === Object(obj);
     }
 
+    /****************
+     *  Templating  *
+     ****************/
+
     /**
      * Takes a string of HTML and converts it to an actual DOM element
      * @private
@@ -116,6 +120,78 @@
         div.innerHTML = htmlString;
         return div.children[0];
     }
+
+    /**
+     * Applies a template to a target.  Creates a new element based on a template,
+     * then merges it with the target element.  The newly created top-level element
+     * is returned, although is excluded from being inserted in to the document.
+     * @param  {Element}  target   A target element
+     * @param  {Function} template A templating function
+     * @param  {Object}   data     The data passed to the template function
+     * @return {Element}           The top-level templated element
+     */
+    function applyTemplate(target, template, data) {
+        var child, lastChild, className;
+        var newElement = Ascot.utils.htmlStringToElement(template(data || undefined));
+
+        removeChildren(target);
+
+        // Copy classes from top-level templated element to target element
+        className = Ascot.utils.mergeClassLists(newElement.className, target.className);
+        if (className) { target.className = className; }
+
+        // Move all child module elements in to target element
+        for (var i=newElement.childNodes.length-1; i>=0; i-=1) {
+            child     = newElement.removeChild(newElement.childNodes[i]);
+            lastChild = target.insertBefore(child, lastChild || undefined);
+        }
+
+        return newElement;
+    }
+
+    /**
+     * Removes all child elements from a target element
+     * @param  {Element} element An HTML element
+     * @return {Element}         element
+     */
+    function removeChildren(element) {
+        for (var i=element.childNodes.length-1; i>=0; i-=1) {
+            element.removeChild(element.childNodes[i]);
+        }
+
+        return element;
+    }
+
+    /**
+     * Merges together two lists of classes in to a single class list
+     * @param  {String} classListA A space-separated list of class names
+     * @param  {String} classListB A space-separated list of class names
+     * @return {String}            A merged list of class names
+     */
+    function mergeClassLists(classListA, classListB) {
+        var newList, name;
+
+        classListA = classListA.split(' ');
+        classListB = classListB.split(' ');
+
+        newList = [].concat(classListA);
+
+        for (var i=0; i<classListB.length; i+=1) {
+            name = classListB[i];
+
+            if (newList.indexOf(name) < 0) {
+                newList.push(name);
+            }
+        }
+
+        newList = newList.join(' ').trim();
+
+        return newList === '' ? undefined : newList.join(' ').trim();
+    }
+
+    /*************************
+     *  Object Manipulation  *
+     *************************/
 
     /**
      * Performs a recursive copy of any data.  All data as
@@ -191,6 +267,10 @@
         return target;
     }
 
+    /*******************
+     *  URL Utilities  *
+     *******************/
+
     /**
      * Retrieves parameters from the URL query string
      * @return {Object} An object containing all query parameters
@@ -213,33 +293,13 @@
         return params;
     }
 
-    /**
-     * Merges together two lists of classes in to a single class list
-     * @param  {String} classListA A space-separated list of class names
-     * @param  {String} classListB A space-separated list of class names
-     * @return {String}            A merged list of class names
-     */
-    function mergeClassLists(classListA, classListB) {
-        var newList;
-        var name;
+    /*********
+     *  API  *
+     *********/
 
-        classListA = classListA.split(' ');
-        classListB = classListB.split(' ');
+    Ascot.utils = {};
 
-        newList = [].concat(classListA);
-
-        for (var i=0; i<classListB.length; i+=1) {
-            name = classListB[i];
-
-            if (newList.indexOf(name) < 0) {
-                newList.push(name);
-            }
-        }
-
-        return newList.join(' ').trim();
-    }
-
-    Object.defineProperties(Ascot, {
+    Object.defineProperties(Ascot.utils, {
 
         isDescriptor            : { value : isDescriptor },
         expandDescriptor        : { value : expandDescriptor },
@@ -247,10 +307,13 @@
         isFunction              : { value : isFunction },
         isObject                : { value : isObject },
         htmlStringToElement     : { value : htmlStringToElement },
+        applyTemplate           : { value : applyTemplate },
+        removeChildren          : { value : removeChildren },
         deepCopy                : { value : deepCopy },
         deepExtend              : { value : deepExtend },
         getQueryParameters      : { value : getQueryParameters },
         mergeClassLists         : { value : mergeClassLists }
+
     });
 
 }(this||window));

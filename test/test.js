@@ -1,4 +1,4 @@
-/* global test, ok, equal, deepEqual, _, Ascot */
+/* global test, ok, equal, deepEqual, Ascot */
 'use strict';
 
 // PhantomJS doesn't support bind yet
@@ -24,7 +24,7 @@ test('Ascot', function() {
  ***************************/
 
 module('Base Module', {
-    baseModule : Ascot.createModule({
+    baseModule : Ascot.defineModule({
         propA : 'hello',
         propB : { enm : true, cfg : false, val : 5, wrt: true }
     }),
@@ -58,14 +58,17 @@ test('Module creation', function() {
 
 module('Data/Element/Templating', {
     data     : { phrase : 'hello world!' },
-    module   : Ascot.createModule({
+    module   : Ascot.defineModule({
         template : function(data) { return '<div>' + data.phrase + '</div>'; }
     }),
 
     setup : function() {
         document.body.insertAdjacentHTML('beforeend', '<div id="test"></div>');
-        this.module.template = this.template;
-        this.module = this.module(document.getElementById('test'), { data : this.data });
+        this.module = this.module({
+            data    : this.data,
+            element : document.getElementById('test')
+        });
+        this.module.data = this.data;
     },
 
     teardown : function() {
@@ -78,7 +81,7 @@ test('Application', function(){
     deepEqual(this.module.data, this.data,
         'Data was set on module');
 
-    deepEqual(this.module.__element__, document.getElementById('test'),
+    deepEqual(this.module._element, document.getElementById('test'),
         'Element was set on module');
 
     equal(document.getElementById('test').innerHTML, this.data.phrase,
@@ -101,7 +104,7 @@ test('Removal', function() {
 
 module('Module Options', {
     options : { optA : true },
-    module : Ascot.createModule({
+    module : Ascot.defineModule({
         options : { optA : false }
     }),
 
@@ -124,7 +127,7 @@ test('Options application', function() {
  *******************/
 
 module('Data Updating', {
-    module : Ascot.createModule({
+    module : Ascot.defineModule({
         update : function() { this.didUpdate = true; },
         data : {
             itemB : {
@@ -168,25 +171,32 @@ module('Bundle', {
         template : function() { return '<div>hello, ocean!</div>'; }
     }),
     data : { prompt : 'hello, world!' },
+    test : {},
 
     setup : function() {
         document.body.insertAdjacentHTML('beforeend', '<div id="main"></div>');
 
+        var test = this.test;
+
         var main = Ascot.registerBundle('main', {
-            module : this.moduleA,
-            data : this.data,
-            submodules : {
-                '#test' : 'moduleB',
-                '#test2' : {
-                    template : function(data) { return '<div>' + data.prompt + '</div>'; },
-                    data     : this.data
-                }
+            target     : '#main',
+            module     : this.moduleA,
+            controller : function(accessor) { test.accessor = accessor; },
+            settings   : {
+                data : this.data
             },
 
-            variantA : {
-                submodules : {
-                    '#test' : 'moduleC'
-                }
+            childA : {
+                target : '#test',
+                bundle : 'moduleB'
+            },
+
+            childB : {
+                settings : {
+                    template : function(data) { return '<div>' + data.prompt + '</div>'; },
+                    data     : this.data
+                },
+                target : '#test2'
             }
         });
 
@@ -199,11 +209,14 @@ module('Bundle', {
         });
 
         Ascot.registerBundle('templateA', {
-            template : function(data) { return '<div>' + data.prompt + '</div>'; },
-            data     : this.data
+            target : '#main',
+            settings : {
+                template : function(data) { return '<div>' + data.prompt + '</div>'; },
+                data     : this.data
+            }
         });
 
-        main('#main');
+        main.deploy(document);
     },
 
     teardown : function() {
@@ -229,22 +242,23 @@ test('Bundle formation', function() {
         'ID copied');
 });
 
-test('Bundle variant formation', function() {
-    ok(Ascot.bundles['main:variantA'],
-        'Variant bundle added to collection');
-
-    Ascot.bundles['main:variantA']('#main');
-
-    equal(document.getElementById('test').innerHTML, 'hello, ocean!',
-        'Variant submodule applied');
-});
-
 test('Bundle formation with template only', function() {
     ok(Ascot.bundles.templateA,
         'Template bundle added to collection');
 
-    Ascot.bundles.templateA('#main');
+    Ascot.bundles.templateA.deploy('#main');
 
     equal(document.getElementById('main').innerHTML, 'hello, world!',
         'Template applied');
+});
+
+test('Controller calling', function() {
+    ok(typeof this.test.accessor === 'function',
+        'Controller called');
+
+    ok(typeof this.test.accessor.childB === 'function',
+        'Child accessors added to parent accessor');
+
+    ok(this.test.accessor().data,
+        'Accessor returns module');
 });

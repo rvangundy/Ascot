@@ -7,8 +7,34 @@
      *****************/
 
     /**
-     * Destroys the module, removing it from memory.  Also destroys
-     * any associated DOM elements.  Runs shutdown function if available.
+     * Applies the module to specified DOM element
+     * @param  {Element} target An element on which to apply a module
+     */
+    function deploy(target) {
+        var newElement;
+
+        /* jshint validthis : true, camelcase : false */
+        if (!target) { return this; }
+
+        // Use a template to render a new element
+        if (this.template) {
+            newElement = Ascot.utils.applyTemplate(target, this.template, this.data);
+            target.id  = this.id || newElement.id || target.id;
+
+        // If no template, don't attempt to render a new element
+        } else {
+            target.id = this.id || target.id;
+        }
+
+        // Establish the element as a member of the module
+        this._element = target;
+
+        return this;
+    }
+
+    /**
+     * Destroys the module.  Also removes any associated elements from
+     * the document.  Runs shutdown function if available.
      * @method destroy
      * @return {Object} This for chaining
      */
@@ -17,65 +43,12 @@
 
         // Perform optional shutdown sequence
         if (this.shutdown) {
-            this.shutdown();
+            this.shutdown(this._element);
         }
 
         // Remove the element from the DOM
-        if (this.__element__ && this.__element__.parentNode) {
-            this.__element__.parentNode.removeChild(this.__element__);
-        }
-
-        return this;
-    }
-
-    /**
-     * Removes a module from a DOM element, returning the element
-     * to its original state prior to loading the module.
-     * @method  remove
-     * @return {Object} This for chaining
-     */
-    function remove() {
-        /* jshint validthis : true, camelcase: false */
-        var parent = this.__element__.parentNode;
-        var element = this.__element__;
-        var prev    = this.__previousElement__;
-
-        if (parent) {
-            parent.replaceChild(prev, element);
-        }
-
-        this.__element__         = prev;
-        this.__previousElement__ = element;
-
-        return this;
-    }
-
-    /**********************
-     *  Element Handling  *
-     **********************/
-
-    /**
-     * Applies the module to specified DOM element
-     * @param  {Element} element An element on which to apply a module
-     */
-    function deploy(element) {
-        /* jshint validthis : true, camelcase : false */
-        if (!element) { return this; }
-
-        var newElement;
-        var parent = element.parentNode;
-
-        if (parent) {
-
-            // Create the new element using the module's template
-            this.__element__ = newElement = Ascot.htmlStringToElement(this.template(this.data));
-
-            // Replace element in DOM with new module element
-            this.__previousElement__ = parent.replaceChild(newElement, element);
-
-            // Merge IDs and classes
-            newElement.id = this.id || newElement.id || element.id;
-            newElement.className = Ascot.mergeClassLists(newElement.className, element.className);
+        if (this._element && this._element.parentNode) {
+            this._element.parentNode.removeChild(this._element);
         }
 
         return this;
@@ -87,14 +60,14 @@
 
     /**
      * Merges incoming data; fragments, strings, etc. in to the
-     * target data.
-     * @param  {Object}        data    Target data to merge with
+     * module's data.  Calls either update or a templating function if available.
      * @param  {Object|String} newData Some new data or a fragment to merge
      * @return {Object}        data
      */
-    function updateData(data, newData) {
+    function updateData(newData) {
         /* jshint validthis : true, camelcase : false */
         var firstItem;
+        var data = this._data;
 
         // Convert a JSON string to an object
         if (typeof newData === 'string') {
@@ -106,7 +79,7 @@
         // If data is an ID reference, set its data directly
         firstItem = Object.keys(newData)[0];
         if (firstItem && firstItem.indexOf('#') === 0) {
-            setDataValue(this.__data__, firstItem, newData[firstItem]);
+            setDataValue(this._data, firstItem, newData[firstItem]);
 
         // Merge data
         } else {
@@ -115,7 +88,7 @@
 
         // Call custom update method
         if (this.update) { this.update(data); }
-        else if (this.template) { this.element = this.template(data); }
+        else if (this.template) { Ascot.utils.applyTemplate(this.element, this.template, data); }
 
         return data;
     }
@@ -127,9 +100,11 @@
      * @return         data
      */
     function mergeData(data, newData) {
+        var isObject = Ascot.utils.isObject;
+
         for (var i in newData) {
-            if (Ascot.isObject(newData[i])) {
-                data[i] = Ascot.isObject(data[i]) ? data[i] : {};
+            if (isObject(newData[i])) {
+                data[i] = isObject(data[i]) ? data[i] : {};
                 data[i] = mergeData(data[i], newData[i]);
             } else {
                 data[i] = newData[i];
@@ -198,10 +173,11 @@
      */
     function getItemByID(data, id) {
         var item;
+        var isObject = Ascot.utils.isObject;
 
         // Recursively attempt to find an item with the specified id
         for (var i in data) {
-            if (Ascot.isObject(data[i])) {
+            if (isObject(data[i])) {
                 if (data[i].id === id) { return data[i]; }
                 item = getItemByID(data[i], id);
                 if (item && item.id === id) { return item; }
@@ -211,34 +187,64 @@
         return false;
     }
 
-    /********************
-     *  Module Factory  *
-     ********************/
+    /*********************
+     *  Module Creation  *
+     *********************/
 
     /**
-     * Creates a new module, which is a combination of the module
+     * Creates a module
+     * @param {Object} settings Module settings
+     * @param {Object} desc     A descriptor
+     */
+    function createModule(settings, desc) {
+        if (!desc) { throw new Error('Descriptor not provided'); }
+
+        var module = Object.create({}, desc);
+
+        if (settings) {
+            module._data    = settings.data;
+            module.options  = settings.options;
+            module.id       = settings.id;
+            module.template = settings.template || module.template;
+
+            // Setting the element auto-deploys, so do not attempt unless
+            // an element is provided
+            if (settings.element) {
+                module.element = settings.element;
+            }
+        }
+
+        return module;
+    }
+
+    /**
+     * Defines a new module, which is a combination of the module
      * descriptor and the descriptor passed as a parameter to the
      * createModule method.
      * @param  {Object} desc A descriptor to use as the basis for the module
      * @return {Function}    A factory function used to create a module instance
      */
-    Ascot.createModule = function(desc) {
+    Ascot.defineModule = function(desc) {
         var copy, priv;
-        var newDescriptor = Ascot.deepCopy(api);
+        var deepCopy                = Ascot.utils.deepCopy;
+        var isDescriptor            = Ascot.utils.isDescriptor;
+        var expandDescriptor        = Ascot.utils.expandDescriptor;
+        var createDefaultDescriptor = Ascot.utils.createDefaultDescriptor;
+        var newDescriptor           = deepCopy(api);
 
         desc = desc || {};
 
         // Creates a single compiled descriptor
         for (var i in desc) {
-            copy = Ascot.deepCopy(desc[i]);
+            copy = deepCopy(desc[i]);
 
             // Sets values for existing module API properties
             if (i in newDescriptor) {
-                priv = '__' + i + '__';
+                priv = '_' + i;
 
                 // Set the value of the property
                 if ('value' in newDescriptor[i]) {
-                    if (Ascot.isDescriptor(copy)) {
+                    if (isDescriptor(copy)) {
                         newDescriptor[i] = copy;
                     } else {
                         newDescriptor[i].value = copy;
@@ -246,7 +252,7 @@
 
                 // Set the private alternative to the value
                 } else if (priv in newDescriptor) {
-                    if (Ascot.isDescriptor(copy)) {
+                    if (isDescriptor(copy)) {
                         newDescriptor[priv] = copy;
                     } else {
                         newDescriptor[priv].value = copy;
@@ -255,26 +261,17 @@
 
             // Adds new properties to the API
             } else {
-                if (Ascot.isDescriptor(copy)) {
-                    newDescriptor[i] = Ascot.expandDescriptor(copy);
+                if (isDescriptor(copy)) {
+                    newDescriptor[i] = expandDescriptor(copy);
                 } else {
-                    newDescriptor[i] = Ascot.createDefaultDescriptor(copy);
+                    newDescriptor[i] = createDefaultDescriptor(copy);
                 }
             }
         }
 
-        return function(element, desc) {
-            var module = Object.create({}, newDescriptor);
-
-            if (desc) {
-                module.data    = desc.data;
-                module.options = desc.options;
-                module.id      = desc.id;
-            }
-
-            module.element  = element;
-
-            return module;
+        // Return a factory function for creating the module
+        return function(settings) {
+            return createModule(settings, newDescriptor);
         };
     };
 
@@ -282,9 +279,31 @@
      *  API Settings  *
      ******************/
 
-    var api = Ascot.expandDescriptor({
+    var api = Ascot.utils.expandDescriptor({
 
         /* jshint camelcase: false */
+
+        /********************
+         *  API Properties  *
+         ********************/
+
+        /**
+         * The current element associated with the module
+         * @type {Element}
+         */
+        _element : { val : null, wrt : true, cfg : false, enm : false },
+
+        /**
+         * The data associated with the module
+         * @type {Element}
+         */
+        _data : { val : {}, wrt : true, cfg : false, enm : false },
+
+        /**
+         * All options related to this module
+         * @type {Object}
+         */
+        _options : { val : {}, wrt : false, cfg : false, enm : false },
 
         /*************************
          *  Method Placeholders  *
@@ -297,7 +316,7 @@
          * @param {Object} data Data used to seed generation of DOM
          * @type {Function}
          */
-        template : { val : null, wrt : true, cfg : false, enm : false },
+        template : { val : null, wrt : true, cfg : false, enm : true },
 
         /**
          * The initialize method is run immediately after the module is
@@ -305,34 +324,27 @@
          * @param {Element} element The top-level DOM element associated with the module
          * @type {Function}
          */
-        initialize : { val : null, wrt : false, cfg : false, enm : false },
+        initialize : { val : null, wrt : false, cfg : false, enm : true },
 
         /**
          * Processes passed data and updates the module accordingly.
          * @param {Object} data Updated data associated with this module
          * @type {Function}
          */
-        update : { val : null, wrt : false, cfg : false, enm : false },
+        update : { val : null, wrt : false, cfg : false, enm : true },
 
         /**
          * Whenever the module is unloaded, a shutdown method may be run
          * to perform additional shutdown steps.
          * @type {Function}
          */
-        shutdown : { val : null, wrt : false, cfg : false, enm : false },
-
-        /**
-         * A list of all submodules under this module
-         * @type {Array}
-         */
-        submodules : { val : [], wrt : true, cfg : false, enm : false },
+        shutdown : { val : null, wrt : false, cfg : false, enm : true },
 
         /*************
          *  Methods  *
          *************/
 
-        destroy : { val : destroy, wrt : false, enm : false, cfg : false },
-        remove  : { val : remove,  wrt : false, enm : false, cfg : false },
+        destroy : { val : destroy, wrt : false, enm : true, cfg : false },
 
         /***************
          *  Accessors  *
@@ -342,10 +354,10 @@
          * @property {Element} element The generated HTML element associated with the module
          */
         element : {
-            enm : false,
+            enm : true,
             cfg : false,
-            get : function() { return this.__element__; },
-            set : function(element) { deploy.call(this, element); }
+            get : function() { return this._element; },
+            set : deploy
         },
 
         /**
@@ -354,13 +366,13 @@
          * @type {Object}
          */
         options : {
-            enm : false,
+            enm : true,
             cfg : false,
-            get : function() { return this.__options__; },
+            get : function() { return this._options; },
             set : function(options) {
                 // Merge options rather than replace entire object
                 for (var i in options) {
-                    this.__options__[i] = options[i];
+                    this._options[i] = options[i];
                 }
             }
         },
@@ -370,40 +382,11 @@
          * @type {Object}
          */
         data : {
+            enm : true,
             cfg : false,
-            enm : false,
-            get : function() { return this.__data__; },
-            set : function(data) { updateData.call(this, this.__data__, data); }
-        },
-
-        /********************
-         *  API Properties  *
-         ********************/
-
-        /**
-         * The current element associated with the module
-         * @type {Element}
-         */
-        __element__ : { val : null, wrt : true, cfg : false, enm : false },
-
-        /**
-         * The data associated with the module
-         * @type {Element}
-         */
-        __data__ : { val : {}, wrt : true, cfg : false, enm : false },
-
-        /**
-         * A clone of the DOM element prior to the application of a module
-         * @type {Element}
-         */
-        __previousElement__ : { val : null, wrt : true, cfg : false, enm : false },
-
-        /**
-         * All options related to this module
-         * @type {Object}
-         */
-        __options__ : { val : {}, wrt : false, cfg : false, enm : false }
-
+            get : function() { return this._data; },
+            set : updateData
+        }
     });
 
 }(this||window));

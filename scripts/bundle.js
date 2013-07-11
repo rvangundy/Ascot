@@ -3,173 +3,153 @@
     'use strict';
 
     /**
-     * Runs the build, attaching it to a specified element
-     * or amongst child elements by selector
-     * @param  {Element|String}  element|selector An element to run a module build on
-     * @param  {String} selector A selector used to determine elements
-     * @return {Array}           An array of newly built modules
+     * Recursively deploys a module based on the bundle.  Recursively deploys all submodules.
+     * The passed accessor function is recursively built out and passed to any controller function.
+     * @param  {Element}  element  A parent element that determines the context within which to deploy
+     * @param  {Function} accessor A tree of accessors that return modules in a module hierarchy
+     * @return {Object}            The newly built module
      */
-    function deployBundle(element, selector) {
+    function deploy(element, accessor, target) {
         /* jshint validthis : true */
-        var elements, module, sub;
-        var modules = [];
+        var module, mod, submodules, sub;
 
-        // Adjust parameters for selector-only arguments
-        if (!selector) {
-            selector = element;
-            element  = document;
+        // Allow for selector-based deployment
+        if (typeof element === 'string') {
+            target  = element;
+            element = document;
         }
 
-        // Adjust for element-only arguments
-        if (typeof selector === 'string') {
-            elements = element.querySelectorAll(selector);
-        } else {
-            elements = [selector];
+        // Use either a passed target or a target specified by a CSS selector
+        // in the bundle
+        target = target || element.querySelector(this.target);
+        if (typeof target === 'string') { target = element.querySelector(target); }
+        if (!target) { throw new Error('No target specified for bundle definition'); }
+
+        // Make sure a settings object exists
+        this.settings = this.settings || {};
+
+        // Deploy as a module
+        if (this.module) {
+            module = this.module(this.settings);
+            module.element = target;
+
+        // Deploy as a template
+        } else if (this.settings.template) {
+            module = Ascot.utils.applyTemplate(target, this.settings.template, this.settings.data);
         }
 
-        // Create modules and attach to each element
-        for (var i=0; i<elements.length; i+=1) {
-            element = elements[i];
+        // Create an accessor if one has not already been created
+        accessor = accessor || access.bind(module);
 
-            // Deploy as a module
-            if (this.module) {
-                module  = this.module(element, {
-                    data     : this.data,
-                    options  : this.options,
-                    id       : this.id
-                });
+        // Build submodules
+        if (this.submodules) {
+            submodules = this.submodules;
 
-                modules.push(module);
+            for (var j in submodules) {
+                sub = submodules[j];
 
-            // Deploy as a template
-            } else if (this.template) {
-                deployTemplate(element, this.template, this.data);
-            }
+                // Retrieve string-referenced bundles
+                if (sub.bundle) {
+                    mod = Ascot.bundles[sub.bundle].deploy(target, accessor, sub.target);
 
-            // Build submodules
-            if (this.submodules) {
-                sub = this.submodules;
-
-                for (var j in sub) {
-                    module.submodules = module.submodules.concat(deploySubmodules(module.element, j, sub[j]));
+                // Deploy locally-defined bundles
+                } else {
+                    mod = sub.deploy(target, accessor, sub.target);
                 }
+
+                // Attach an accessor for the submodule
+                accessor[j] = access.bind(mod);
             }
         }
 
-        // Initialize all modules
-        for (var k=0; k<modules.length; k+=1) {
-            if (modules[k].initialize) {
-                modules[k].initialize(modules[k].element, this.data, this.options);
-            }
+        // Call the optional controller
+        if (this.controller) {
+            this.controller.call(module, accessor);
         }
 
-        return modules;
+        // Initialize the module
+        if (module.initialize) {
+            module.initialize(element, this.settings.data, this.settings.options);
+        }
+
+        return module;
     }
 
     /**
-     * Builds a submodule based on a particular build name and selector
-     * @param  {Element} parent   The parent element under which to assign submodules
-     * @param  {String}  selector A selector query string used to determine where to assign modules
-     * @param  {String|Array} name The name or names of builds to use as submodules
+     * A function that only returns its context.
      */
-    function deploySubmodules(parent, selector, name) {
-        /* jshint camelcase : false, loopfunc : true */
-        var bundle, elements;
-        var subs = [];
-
-        if (!Array.isArray(name)) { name = [name]; }
-
-        // Get specified elements from parent
-        elements = parent.querySelectorAll(selector);
-
-        // Deploy submodules to each element
-        for (var i=0; i<elements.length; i+=1) {
-            if (!name[i]) { break; }
-
-            // Deploy template-based submodule
-            if (Ascot.isObject(name[i])) {
-                bundle = (function(template, data) {
-                    return function(element) {
-                        return deployTemplate(element, template, data);
-                    };
-                }(name[i].template, name[i].data));
-
-            // Deploy a bundle-referenced submodule
-            } else if (typeof name[i] === 'string') {
-                bundle = Ascot.__bundles__[name[i]];
-
-            // Do nothing for invalid items
-            } else {
-                continue;
-            }
-
-            subs = subs.concat(bundle(elements[i]));
-        }
-
-        return subs;
-    }
-
-    /**
-     * Deploys a template on to target.  Usually used in the absence of a module.
-     * @param  {Element}  element   The element to replace with the template
-     * @param  {Function} tempalate A templating function
-     * @param  {Object}   data      Data used to populate the template
-     * @return {Element}            The new element
-     */
-    function deployTemplate(element, template, data) {
-        var parent     = element.parentNode;
-        var newElement = Ascot.htmlStringToElement(template(data || {}));
-
-        parent.replaceChild(newElement, element);
-
-        newElement.id = element.id || newElement.id;
-        newElement.className = Ascot.mergeClassLists(newElement.className, element.className);
-
-        return newElement;
+    function access() {
+        /* jshint validthis : true */
+        return this;
     }
 
     /**
      * Registers a build with the Ascot library
-     * @param  {String} name     The name of the build
-     * @param  {Object} settings Settings for this build
-     * @return {Function}        A factory function that applies a build to elements
+     * @param  {String} name The name of the build
+     * @param  {Object} def  A build definition object
+     * @return {Function}    A factory function that applies a build to elements
      */
-    Ascot.registerBundle = function(name, settings) {
+    function registerBundle(name, def) {
         /* jshint validthis : true, camelcase : false */
-        var variants = {};
-        var build = Object.create({}, api);
+        var bundle     = Object.create({}, api);
+        var submodules = bundle.submodules = {};
+        var isObject   = Ascot.utils.isObject;
 
-        // Sort settings from variants
-        for (var i in settings) {
-            // Copy settings over to build
-            if (i in build) {
-                build[i] = settings[i];
+        // Adjust for single argument
+        if (name === Object(name)) {
+            def  = name;
+            name = false;
+        }
 
-            // Copy variants
+        // If definition contains a bundle reference, do nothing--it is only a reference
+        if (def.bundle) { return def; }
+
+        // Sort submodule bundles from bundle properties
+        for (var i in def) {
+
+            // Copy properties over to bundle
+            if (i in api) {
+                bundle[i] = def[i];
+
+            // Copy submodule bundles
             } else {
-                variants[i] = settings[i];
-                delete settings[i];
+                submodules[i] = def[i];
+                delete def[i];
             }
         }
 
-        // Register variants
-        for (var j in variants) {
-            if (Ascot.isObject(variants[j])) {
-                Ascot.deepExtend(variants[j], settings);
-                Ascot.registerBundle(name + ':' + j, variants[j]);
+        // Register submodule bundles that are not named references
+        for (var j in submodules) {
+            if (isObject(submodules[j])) {
+                submodules[j] = registerBundle(submodules[j]);
             }
         }
 
-        this.__bundles__[name] = deployBundle.bind(build);
+        // Add to collection if a name is specified
+        if (name) {
+            Ascot._bundles[name] = bundle;
+        }
 
-        return this.__bundles__[name];
-    };
+        return bundle;
+    }
+
+    /*******************
+     *  Ascot Exports  *
+     *******************/
+
+    // Make registerBundle a method of the Ascot library
+    Object.defineProperty(Ascot, 'registerBundle', {
+        value        : registerBundle,
+        writable     : false,
+        enumerable   : true,
+        configurable : false
+    });
 
     /**
      * A set of bundle functions that may be retrieved by name
      * @type {Object}
      */
-    Object.defineProperty(Ascot, '__bundles__', {
+    Object.defineProperty(Ascot, '_bundles', {
         value        : {},
         writable     : false,
         enumerable   : false,
@@ -180,54 +160,57 @@
      * A set of build functions that may be retrieved by name
      * @type {Object}
      */
-    /* jshint camelcase : false */
     Object.defineProperty(Ascot, 'bundles', {
-        enumerable   : false,
+        enumerable   : true,
         configurable : false,
-        get : function() { return this.__bundles__; }
+        get : function() { return this._bundles; }
     });
 
     /******************
      *  External API  *
      ******************/
 
-    var api = Ascot.expandDescriptor({
+    var api = Ascot.utils.expandDescriptor({
+
+        /****************
+         *  Properties  *
+         ****************/
 
         /**
-         * An optional ID to associate with a single-target bundle/module.
-         * @type {String}
-         */
-        id : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * A module factory function used to generate this build
+         * A module constructor
          * @type {Function}
          */
         module : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
-         * The data reflected by this build
+         * Settings to pass when constructing a module
          * @type {Object}
          */
-        data : { val : null, wrt : true, enm : true, cfg : false },
+        settings : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
-         * Any special options particular to this build
-         * @type {Object}
-         */
-        options : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * Submodules which should be instantiated as part of this build
-         * @type {Object}
-         */
-        submodules : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * A template to use; normally specified within the module
+         * A controller to use when deploying a bundle
          * @type {Function}
          */
-        template : { val : null, wrt : true, enm : true, cfg : false }
+        controller : { val : null, wrt : true, enm : true, cfg : false },
+
+        /**
+         * A list of submodules associated with a bundle
+         * @type {Object}
+         */
+        submodules : { val : null, wrt : true, enm : true, cfg : false},
+
+        /**
+         * A CSS selector that determines where modules should be deployed
+         * @type {Object}
+         */
+        target : { val : null, wrt : true, enm : true, cfg : false },
+
+        /*************
+         *  Methods  *
+         *************/
+
+        deploy : { val : deploy, wrt : true, enm : true, cfg : false }
 
     });
 
