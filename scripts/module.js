@@ -288,6 +288,12 @@
          ********************/
 
         /**
+         * An ID that is copied over to a target element
+         * @type {String}
+         */
+        id : { val : null, wrt : true, enm : true, cfg : false },
+
+        /**
          * The current element associated with the module
          * @type {Element}
          */
