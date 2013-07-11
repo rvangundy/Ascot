@@ -8,7 +8,7 @@
      * @return {Function}    A factory function that creates a module
      */
     var Ascot = function(desc) {
-        return Ascot.createModule(desc);
+        return Ascot.defineModule(desc);
     };
 
     window.Ascot = Ascot;
@@ -99,9 +99,9 @@
         };
     }
 
-    /***********************
-     *  Utility Functions  *
-     ***********************/
+    /********************
+     *  Type Utilities  *
+     ********************/
 
     /**
      * Determines if the target is a function
@@ -121,6 +121,10 @@
         return obj === Object(obj);
     }
 
+    /****************
+     *  Templating  *
+     ****************/
+
     /**
      * Takes a string of HTML and converts it to an actual DOM element
      * @private
@@ -132,6 +136,78 @@
         div.innerHTML = htmlString;
         return div.children[0];
     }
+
+    /**
+     * Applies a template to a target.  Creates a new element based on a template,
+     * then merges it with the target element.  The newly created top-level element
+     * is returned, although is excluded from being inserted in to the document.
+     * @param  {Element}  target   A target element
+     * @param  {Function} template A templating function
+     * @param  {Object}   data     The data passed to the template function
+     * @return {Element}           The top-level templated element
+     */
+    function applyTemplate(target, template, data) {
+        var child, lastChild, className;
+        var newElement = Ascot.utils.htmlStringToElement(template(data || undefined));
+
+        removeChildren(target);
+
+        // Copy classes from top-level templated element to target element
+        className = Ascot.utils.mergeClassLists(newElement.className, target.className);
+        if (className) { target.className = className; }
+
+        // Move all child module elements in to target element
+        for (var i=newElement.childNodes.length-1; i>=0; i-=1) {
+            child     = newElement.removeChild(newElement.childNodes[i]);
+            lastChild = target.insertBefore(child, lastChild || undefined);
+        }
+
+        return newElement;
+    }
+
+    /**
+     * Removes all child elements from a target element
+     * @param  {Element} element An HTML element
+     * @return {Element}         element
+     */
+    function removeChildren(element) {
+        for (var i=element.childNodes.length-1; i>=0; i-=1) {
+            element.removeChild(element.childNodes[i]);
+        }
+
+        return element;
+    }
+
+    /**
+     * Merges together two lists of classes in to a single class list
+     * @param  {String} classListA A space-separated list of class names
+     * @param  {String} classListB A space-separated list of class names
+     * @return {String}            A merged list of class names
+     */
+    function mergeClassLists(classListA, classListB) {
+        var newList, name;
+
+        classListA = classListA.split(' ');
+        classListB = classListB.split(' ');
+
+        newList = [].concat(classListA);
+
+        for (var i=0; i<classListB.length; i+=1) {
+            name = classListB[i];
+
+            if (newList.indexOf(name) < 0) {
+                newList.push(name);
+            }
+        }
+
+        newList = newList.join(' ').trim();
+
+        return newList === '' ? undefined : newList.join(' ').trim();
+    }
+
+    /*************************
+     *  Object Manipulation  *
+     *************************/
 
     /**
      * Performs a recursive copy of any data.  All data as
@@ -207,6 +283,10 @@
         return target;
     }
 
+    /*******************
+     *  URL Utilities  *
+     *******************/
+
     /**
      * Retrieves parameters from the URL query string
      * @return {Object} An object containing all query parameters
@@ -229,33 +309,13 @@
         return params;
     }
 
-    /**
-     * Merges together two lists of classes in to a single class list
-     * @param  {String} classListA A space-separated list of class names
-     * @param  {String} classListB A space-separated list of class names
-     * @return {String}            A merged list of class names
-     */
-    function mergeClassLists(classListA, classListB) {
-        var newList;
-        var name;
+    /*********
+     *  API  *
+     *********/
 
-        classListA = classListA.split(' ');
-        classListB = classListB.split(' ');
+    Ascot.utils = {};
 
-        newList = [].concat(classListA);
-
-        for (var i=0; i<classListB.length; i+=1) {
-            name = classListB[i];
-
-            if (newList.indexOf(name) < 0) {
-                newList.push(name);
-            }
-        }
-
-        return newList.join(' ').trim();
-    }
-
-    Object.defineProperties(Ascot, {
+    Object.defineProperties(Ascot.utils, {
 
         isDescriptor            : { value : isDescriptor },
         expandDescriptor        : { value : expandDescriptor },
@@ -263,10 +323,13 @@
         isFunction              : { value : isFunction },
         isObject                : { value : isObject },
         htmlStringToElement     : { value : htmlStringToElement },
+        applyTemplate           : { value : applyTemplate },
+        removeChildren          : { value : removeChildren },
         deepCopy                : { value : deepCopy },
         deepExtend              : { value : deepExtend },
         getQueryParameters      : { value : getQueryParameters },
         mergeClassLists         : { value : mergeClassLists }
+
     });
 
 }(this||window));
@@ -279,8 +342,34 @@
      *****************/
 
     /**
-     * Destroys the module, removing it from memory.  Also destroys
-     * any associated DOM elements.  Runs shutdown function if available.
+     * Applies the module to specified DOM element
+     * @param  {Element} target An element on which to apply a module
+     */
+    function deploy(target) {
+        var newElement;
+
+        /* jshint validthis : true, camelcase : false */
+        if (!target) { return this; }
+
+        // Use a template to render a new element
+        if (this.template) {
+            newElement = Ascot.utils.applyTemplate(target, this.template, this.data);
+            target.id  = this.id || newElement.id || target.id;
+
+        // If no template, don't attempt to render a new element
+        } else {
+            target.id = this.id || target.id;
+        }
+
+        // Establish the element as a member of the module
+        this._element = target;
+
+        return this;
+    }
+
+    /**
+     * Destroys the module.  Also removes any associated elements from
+     * the document.  Runs shutdown function if available.
      * @method destroy
      * @return {Object} This for chaining
      */
@@ -289,65 +378,12 @@
 
         // Perform optional shutdown sequence
         if (this.shutdown) {
-            this.shutdown();
+            this.shutdown(this._element);
         }
 
         // Remove the element from the DOM
-        if (this.__element__ && this.__element__.parentNode) {
-            this.__element__.parentNode.removeChild(this.__element__);
-        }
-
-        return this;
-    }
-
-    /**
-     * Removes a module from a DOM element, returning the element
-     * to its original state prior to loading the module.
-     * @method  remove
-     * @return {Object} This for chaining
-     */
-    function remove() {
-        /* jshint validthis : true, camelcase: false */
-        var parent = this.__element__.parentNode;
-        var element = this.__element__;
-        var prev    = this.__previousElement__;
-
-        if (parent) {
-            parent.replaceChild(prev, element);
-        }
-
-        this.__element__         = prev;
-        this.__previousElement__ = element;
-
-        return this;
-    }
-
-    /**********************
-     *  Element Handling  *
-     **********************/
-
-    /**
-     * Applies the module to specified DOM element
-     * @param  {Element} element An element on which to apply a module
-     */
-    function deploy(element) {
-        /* jshint validthis : true, camelcase : false */
-        if (!element) { return this; }
-
-        var newElement;
-        var parent = element.parentNode;
-
-        if (parent) {
-
-            // Create the new element using the module's template
-            this.__element__ = newElement = Ascot.htmlStringToElement(this.template(this.data));
-
-            // Replace element in DOM with new module element
-            this.__previousElement__ = parent.replaceChild(newElement, element);
-
-            // Merge IDs and classes
-            newElement.id = this.id || newElement.id || element.id;
-            newElement.className = Ascot.mergeClassLists(newElement.className, element.className);
+        if (this._element && this._element.parentNode) {
+            this._element.parentNode.removeChild(this._element);
         }
 
         return this;
@@ -359,14 +395,14 @@
 
     /**
      * Merges incoming data; fragments, strings, etc. in to the
-     * target data.
-     * @param  {Object}        data    Target data to merge with
+     * module's data.  Calls either update or a templating function if available.
      * @param  {Object|String} newData Some new data or a fragment to merge
      * @return {Object}        data
      */
-    function updateData(data, newData) {
+    function updateData(newData) {
         /* jshint validthis : true, camelcase : false */
         var firstItem;
+        var data = this._data;
 
         // Convert a JSON string to an object
         if (typeof newData === 'string') {
@@ -378,7 +414,7 @@
         // If data is an ID reference, set its data directly
         firstItem = Object.keys(newData)[0];
         if (firstItem && firstItem.indexOf('#') === 0) {
-            setDataValue(this.__data__, firstItem, newData[firstItem]);
+            setDataValue(this._data, firstItem, newData[firstItem]);
 
         // Merge data
         } else {
@@ -387,7 +423,7 @@
 
         // Call custom update method
         if (this.update) { this.update(data); }
-        else if (this.template) { this.element = this.template(data); }
+        else if (this.template) { Ascot.utils.applyTemplate(this.element, this.template, data); }
 
         return data;
     }
@@ -399,9 +435,11 @@
      * @return         data
      */
     function mergeData(data, newData) {
+        var isObject = Ascot.utils.isObject;
+
         for (var i in newData) {
-            if (Ascot.isObject(newData[i])) {
-                data[i] = Ascot.isObject(data[i]) ? data[i] : {};
+            if (isObject(newData[i])) {
+                data[i] = isObject(data[i]) ? data[i] : {};
                 data[i] = mergeData(data[i], newData[i]);
             } else {
                 data[i] = newData[i];
@@ -470,10 +508,11 @@
      */
     function getItemByID(data, id) {
         var item;
+        var isObject = Ascot.utils.isObject;
 
         // Recursively attempt to find an item with the specified id
         for (var i in data) {
-            if (Ascot.isObject(data[i])) {
+            if (isObject(data[i])) {
                 if (data[i].id === id) { return data[i]; }
                 item = getItemByID(data[i], id);
                 if (item && item.id === id) { return item; }
@@ -483,34 +522,64 @@
         return false;
     }
 
-    /********************
-     *  Module Factory  *
-     ********************/
+    /*********************
+     *  Module Creation  *
+     *********************/
 
     /**
-     * Creates a new module, which is a combination of the module
+     * Creates a module
+     * @param {Object} settings Module settings
+     * @param {Object} desc     A descriptor
+     */
+    function createModule(settings, desc) {
+        if (!desc) { throw new Error('Descriptor not provided'); }
+
+        var module = Object.create({}, desc);
+
+        if (settings) {
+            module._data    = settings.data;
+            module.options  = settings.options;
+            module.id       = settings.id;
+            module.template = settings.template || module.template;
+
+            // Setting the element auto-deploys, so do not attempt unless
+            // an element is provided
+            if (settings.element) {
+                module.element = settings.element;
+            }
+        }
+
+        return module;
+    }
+
+    /**
+     * Defines a new module, which is a combination of the module
      * descriptor and the descriptor passed as a parameter to the
      * createModule method.
      * @param  {Object} desc A descriptor to use as the basis for the module
      * @return {Function}    A factory function used to create a module instance
      */
-    Ascot.createModule = function(desc) {
+    Ascot.defineModule = function(desc) {
         var copy, priv;
-        var newDescriptor = Ascot.deepCopy(api);
+        var deepCopy                = Ascot.utils.deepCopy;
+        var isDescriptor            = Ascot.utils.isDescriptor;
+        var expandDescriptor        = Ascot.utils.expandDescriptor;
+        var createDefaultDescriptor = Ascot.utils.createDefaultDescriptor;
+        var newDescriptor           = deepCopy(api);
 
         desc = desc || {};
 
         // Creates a single compiled descriptor
         for (var i in desc) {
-            copy = Ascot.deepCopy(desc[i]);
+            copy = deepCopy(desc[i]);
 
             // Sets values for existing module API properties
             if (i in newDescriptor) {
-                priv = '__' + i + '__';
+                priv = '_' + i;
 
                 // Set the value of the property
                 if ('value' in newDescriptor[i]) {
-                    if (Ascot.isDescriptor(copy)) {
+                    if (isDescriptor(copy)) {
                         newDescriptor[i] = copy;
                     } else {
                         newDescriptor[i].value = copy;
@@ -518,7 +587,7 @@
 
                 // Set the private alternative to the value
                 } else if (priv in newDescriptor) {
-                    if (Ascot.isDescriptor(copy)) {
+                    if (isDescriptor(copy)) {
                         newDescriptor[priv] = copy;
                     } else {
                         newDescriptor[priv].value = copy;
@@ -527,26 +596,17 @@
 
             // Adds new properties to the API
             } else {
-                if (Ascot.isDescriptor(copy)) {
-                    newDescriptor[i] = Ascot.expandDescriptor(copy);
+                if (isDescriptor(copy)) {
+                    newDescriptor[i] = expandDescriptor(copy);
                 } else {
-                    newDescriptor[i] = Ascot.createDefaultDescriptor(copy);
+                    newDescriptor[i] = createDefaultDescriptor(copy);
                 }
             }
         }
 
-        return function(element, desc) {
-            var module = Object.create({}, newDescriptor);
-
-            if (desc) {
-                module.data    = desc.data;
-                module.options = desc.options;
-                module.id      = desc.id;
-            }
-
-            module.element  = element;
-
-            return module;
+        // Return a factory function for creating the module
+        return function(settings) {
+            return createModule(settings, newDescriptor);
         };
     };
 
@@ -554,9 +614,31 @@
      *  API Settings  *
      ******************/
 
-    var api = Ascot.expandDescriptor({
+    var api = Ascot.utils.expandDescriptor({
 
         /* jshint camelcase: false */
+
+        /********************
+         *  API Properties  *
+         ********************/
+
+        /**
+         * The current element associated with the module
+         * @type {Element}
+         */
+        _element : { val : null, wrt : true, cfg : false, enm : false },
+
+        /**
+         * The data associated with the module
+         * @type {Element}
+         */
+        _data : { val : {}, wrt : true, cfg : false, enm : false },
+
+        /**
+         * All options related to this module
+         * @type {Object}
+         */
+        _options : { val : {}, wrt : false, cfg : false, enm : false },
 
         /*************************
          *  Method Placeholders  *
@@ -569,7 +651,7 @@
          * @param {Object} data Data used to seed generation of DOM
          * @type {Function}
          */
-        template : { val : null, wrt : true, cfg : false, enm : false },
+        template : { val : null, wrt : true, cfg : false, enm : true },
 
         /**
          * The initialize method is run immediately after the module is
@@ -577,34 +659,27 @@
          * @param {Element} element The top-level DOM element associated with the module
          * @type {Function}
          */
-        initialize : { val : null, wrt : false, cfg : false, enm : false },
+        initialize : { val : null, wrt : false, cfg : false, enm : true },
 
         /**
          * Processes passed data and updates the module accordingly.
          * @param {Object} data Updated data associated with this module
          * @type {Function}
          */
-        update : { val : null, wrt : false, cfg : false, enm : false },
+        update : { val : null, wrt : false, cfg : false, enm : true },
 
         /**
          * Whenever the module is unloaded, a shutdown method may be run
          * to perform additional shutdown steps.
          * @type {Function}
          */
-        shutdown : { val : null, wrt : false, cfg : false, enm : false },
-
-        /**
-         * A list of all submodules under this module
-         * @type {Array}
-         */
-        submodules : { val : [], wrt : true, cfg : false, enm : false },
+        shutdown : { val : null, wrt : false, cfg : false, enm : true },
 
         /*************
          *  Methods  *
          *************/
 
-        destroy : { val : destroy, wrt : false, enm : false, cfg : false },
-        remove  : { val : remove,  wrt : false, enm : false, cfg : false },
+        destroy : { val : destroy, wrt : false, enm : true, cfg : false },
 
         /***************
          *  Accessors  *
@@ -614,10 +689,10 @@
          * @property {Element} element The generated HTML element associated with the module
          */
         element : {
-            enm : false,
+            enm : true,
             cfg : false,
-            get : function() { return this.__element__; },
-            set : function(element) { deploy.call(this, element); }
+            get : function() { return this._element; },
+            set : deploy
         },
 
         /**
@@ -626,13 +701,13 @@
          * @type {Object}
          */
         options : {
-            enm : false,
+            enm : true,
             cfg : false,
-            get : function() { return this.__options__; },
+            get : function() { return this._options; },
             set : function(options) {
                 // Merge options rather than replace entire object
                 for (var i in options) {
-                    this.__options__[i] = options[i];
+                    this._options[i] = options[i];
                 }
             }
         },
@@ -642,40 +717,11 @@
          * @type {Object}
          */
         data : {
+            enm : true,
             cfg : false,
-            enm : false,
-            get : function() { return this.__data__; },
-            set : function(data) { updateData.call(this, this.__data__, data); }
-        },
-
-        /********************
-         *  API Properties  *
-         ********************/
-
-        /**
-         * The current element associated with the module
-         * @type {Element}
-         */
-        __element__ : { val : null, wrt : true, cfg : false, enm : false },
-
-        /**
-         * The data associated with the module
-         * @type {Element}
-         */
-        __data__ : { val : {}, wrt : true, cfg : false, enm : false },
-
-        /**
-         * A clone of the DOM element prior to the application of a module
-         * @type {Element}
-         */
-        __previousElement__ : { val : null, wrt : true, cfg : false, enm : false },
-
-        /**
-         * All options related to this module
-         * @type {Object}
-         */
-        __options__ : { val : {}, wrt : false, cfg : false, enm : false }
-
+            get : function() { return this._data; },
+            set : updateData
+        }
     });
 
 }(this||window));
@@ -684,173 +730,153 @@
     'use strict';
 
     /**
-     * Runs the build, attaching it to a specified element
-     * or amongst child elements by selector
-     * @param  {Element|String}  element|selector An element to run a module build on
-     * @param  {String} selector A selector used to determine elements
-     * @return {Array}           An array of newly built modules
+     * Recursively deploys a module based on the bundle.  Recursively deploys all submodules.
+     * The passed accessor function is recursively built out and passed to any controller function.
+     * @param  {Element}  element  A parent element that determines the context within which to deploy
+     * @param  {Function} accessor A tree of accessors that return modules in a module hierarchy
+     * @return {Object}            The newly built module
      */
-    function deployBundle(element, selector) {
+    function deploy(element, accessor, target) {
         /* jshint validthis : true */
-        var elements, module, sub;
-        var modules = [];
+        var module, mod, submodules, sub;
 
-        // Adjust parameters for selector-only arguments
-        if (!selector) {
-            selector = element;
-            element  = document;
+        // Allow for selector-based deployment
+        if (typeof element === 'string') {
+            target  = element;
+            element = document;
         }
 
-        // Adjust for element-only arguments
-        if (typeof selector === 'string') {
-            elements = element.querySelectorAll(selector);
-        } else {
-            elements = [selector];
+        // Use either a passed target or a target specified by a CSS selector
+        // in the bundle
+        target = target || element.querySelector(this.target);
+        if (typeof target === 'string') { target = element.querySelector(target); }
+        if (!target) { throw new Error('No target specified for bundle definition'); }
+
+        // Make sure a settings object exists
+        this.settings = this.settings || {};
+
+        // Deploy as a module
+        if (this.module) {
+            module = this.module(this.settings);
+            module.element = target;
+
+        // Deploy as a template
+        } else if (this.settings.template) {
+            module = Ascot.utils.applyTemplate(target, this.settings.template, this.settings.data);
         }
 
-        // Create modules and attach to each element
-        for (var i=0; i<elements.length; i+=1) {
-            element = elements[i];
+        // Create an accessor if one has not already been created
+        accessor = accessor || access.bind(module);
 
-            // Deploy as a module
-            if (this.module) {
-                module  = this.module(element, {
-                    data     : this.data,
-                    options  : this.options,
-                    id       : this.id
-                });
+        // Build submodules
+        if (this.submodules) {
+            submodules = this.submodules;
 
-                modules.push(module);
+            for (var j in submodules) {
+                sub = submodules[j];
 
-            // Deploy as a template
-            } else if (this.template) {
-                deployTemplate(element, this.template, this.data);
-            }
+                // Retrieve string-referenced bundles
+                if (sub.bundle) {
+                    mod = Ascot.bundles[sub.bundle].deploy(target, accessor, sub.target);
 
-            // Build submodules
-            if (this.submodules) {
-                sub = this.submodules;
-
-                for (var j in sub) {
-                    module.submodules = module.submodules.concat(deploySubmodules(module.element, j, sub[j]));
+                // Deploy locally-defined bundles
+                } else {
+                    mod = sub.deploy(target, accessor, sub.target);
                 }
+
+                // Attach an accessor for the submodule
+                accessor[j] = access.bind(mod);
             }
         }
 
-        // Initialize all modules
-        for (var k=0; k<modules.length; k+=1) {
-            if (modules[k].initialize) {
-                modules[k].initialize(modules[k].element, this.data, this.options);
-            }
+        // Call the optional controller
+        if (this.controller) {
+            this.controller.call(module, accessor);
         }
 
-        return modules;
+        // Initialize the module
+        if (module.initialize) {
+            module.initialize(element, this.settings.data, this.settings.options);
+        }
+
+        return module;
     }
 
     /**
-     * Builds a submodule based on a particular build name and selector
-     * @param  {Element} parent   The parent element under which to assign submodules
-     * @param  {String}  selector A selector query string used to determine where to assign modules
-     * @param  {String|Array} name The name or names of builds to use as submodules
+     * A function that only returns its context.
      */
-    function deploySubmodules(parent, selector, name) {
-        /* jshint camelcase : false, loopfunc : true */
-        var bundle, elements;
-        var subs = [];
-
-        if (!Array.isArray(name)) { name = [name]; }
-
-        // Get specified elements from parent
-        elements = parent.querySelectorAll(selector);
-
-        // Deploy submodules to each element
-        for (var i=0; i<elements.length; i+=1) {
-            if (!name[i]) { break; }
-
-            // Deploy template-based submodule
-            if (Ascot.isObject(name[i])) {
-                bundle = (function(template, data) {
-                    return function(element) {
-                        return deployTemplate(element, template, data);
-                    };
-                }(name[i].template, name[i].data));
-
-            // Deploy a bundle-referenced submodule
-            } else if (typeof name[i] === 'string') {
-                bundle = Ascot.__bundles__[name[i]];
-
-            // Do nothing for invalid items
-            } else {
-                continue;
-            }
-
-            subs = subs.concat(bundle(elements[i]));
-        }
-
-        return subs;
-    }
-
-    /**
-     * Deploys a template on to target.  Usually used in the absence of a module.
-     * @param  {Element}  element   The element to replace with the template
-     * @param  {Function} tempalate A templating function
-     * @param  {Object}   data      Data used to populate the template
-     * @return {Element}            The new element
-     */
-    function deployTemplate(element, template, data) {
-        var parent     = element.parentNode;
-        var newElement = Ascot.htmlStringToElement(template(data || {}));
-
-        parent.replaceChild(newElement, element);
-
-        newElement.id = element.id || newElement.id;
-        newElement.className = Ascot.mergeClassLists(newElement.className, element.className);
-
-        return newElement;
+    function access() {
+        /* jshint validthis : true */
+        return this;
     }
 
     /**
      * Registers a build with the Ascot library
-     * @param  {String} name     The name of the build
-     * @param  {Object} settings Settings for this build
-     * @return {Function}        A factory function that applies a build to elements
+     * @param  {String} name The name of the build
+     * @param  {Object} def  A build definition object
+     * @return {Function}    A factory function that applies a build to elements
      */
-    Ascot.registerBundle = function(name, settings) {
+    function registerBundle(name, def) {
         /* jshint validthis : true, camelcase : false */
-        var variants = {};
-        var build = Object.create({}, api);
+        var bundle     = Object.create({}, api);
+        var submodules = bundle.submodules = {};
+        var isObject   = Ascot.utils.isObject;
 
-        // Sort settings from variants
-        for (var i in settings) {
-            // Copy settings over to build
-            if (i in build) {
-                build[i] = settings[i];
+        // Adjust for single argument
+        if (name === Object(name)) {
+            def  = name;
+            name = false;
+        }
 
-            // Copy variants
+        // If definition contains a bundle reference, do nothing--it is only a reference
+        if (def.bundle) { return def; }
+
+        // Sort submodule bundles from bundle properties
+        for (var i in def) {
+
+            // Copy properties over to bundle
+            if (i in api) {
+                bundle[i] = def[i];
+
+            // Copy submodule bundles
             } else {
-                variants[i] = settings[i];
-                delete settings[i];
+                submodules[i] = def[i];
+                delete def[i];
             }
         }
 
-        // Register variants
-        for (var j in variants) {
-            if (Ascot.isObject(variants[j])) {
-                Ascot.deepExtend(variants[j], settings);
-                Ascot.registerBundle(name + ':' + j, variants[j]);
+        // Register submodule bundles that are not named references
+        for (var j in submodules) {
+            if (isObject(submodules[j])) {
+                submodules[j] = registerBundle(submodules[j]);
             }
         }
 
-        this.__bundles__[name] = deployBundle.bind(build);
+        // Add to collection if a name is specified
+        if (name) {
+            Ascot._bundles[name] = bundle;
+        }
 
-        return this.__bundles__[name];
-    };
+        return bundle;
+    }
+
+    /*******************
+     *  Ascot Exports  *
+     *******************/
+
+    // Make registerBundle a method of the Ascot library
+    Object.defineProperty(Ascot, 'registerBundle', {
+        value        : registerBundle,
+        writable     : false,
+        enumerable   : true,
+        configurable : false
+    });
 
     /**
      * A set of bundle functions that may be retrieved by name
      * @type {Object}
      */
-    Object.defineProperty(Ascot, '__bundles__', {
+    Object.defineProperty(Ascot, '_bundles', {
         value        : {},
         writable     : false,
         enumerable   : false,
@@ -861,54 +887,57 @@
      * A set of build functions that may be retrieved by name
      * @type {Object}
      */
-    /* jshint camelcase : false */
     Object.defineProperty(Ascot, 'bundles', {
-        enumerable   : false,
+        enumerable   : true,
         configurable : false,
-        get : function() { return this.__bundles__; }
+        get : function() { return this._bundles; }
     });
 
     /******************
      *  External API  *
      ******************/
 
-    var api = Ascot.expandDescriptor({
+    var api = Ascot.utils.expandDescriptor({
+
+        /****************
+         *  Properties  *
+         ****************/
 
         /**
-         * An optional ID to associate with a single-target bundle/module.
-         * @type {String}
-         */
-        id : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * A module factory function used to generate this build
+         * A module constructor
          * @type {Function}
          */
         module : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
-         * The data reflected by this build
+         * Settings to pass when constructing a module
          * @type {Object}
          */
-        data : { val : null, wrt : true, enm : true, cfg : false },
+        settings : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
-         * Any special options particular to this build
-         * @type {Object}
-         */
-        options : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * Submodules which should be instantiated as part of this build
-         * @type {Object}
-         */
-        submodules : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * A template to use; normally specified within the module
+         * A controller to use when deploying a bundle
          * @type {Function}
          */
-        template : { val : null, wrt : true, enm : true, cfg : false }
+        controller : { val : null, wrt : true, enm : true, cfg : false },
+
+        /**
+         * A list of submodules associated with a bundle
+         * @type {Object}
+         */
+        submodules : { val : null, wrt : true, enm : true, cfg : false},
+
+        /**
+         * A CSS selector that determines where modules should be deployed
+         * @type {Object}
+         */
+        target : { val : null, wrt : true, enm : true, cfg : false },
+
+        /*************
+         *  Methods  *
+         *************/
+
+        deploy : { val : deploy, wrt : true, enm : true, cfg : false }
 
     });
 
