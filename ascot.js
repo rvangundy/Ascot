@@ -202,7 +202,7 @@
 
         newList = newList.join(' ').trim();
 
-        return newList === '' ? undefined : newList.join(' ').trim();
+        return newList === '' ? undefined : newList;
     }
 
     /*************************
@@ -623,6 +623,12 @@
          ********************/
 
         /**
+         * An ID that is copied over to a target element
+         * @type {String}
+         */
+        id : { val : null, wrt : true, enm : true, cfg : false },
+
+        /**
          * The current element associated with the module
          * @type {Element}
          */
@@ -796,7 +802,7 @@
 
         // Initialize the module
         if (module.initialize) {
-            module.initialize(element, this.settings.data, this.settings.options);
+            module.initialize(target, this.settings.data, this.settings.options);
         }
 
         return module;
