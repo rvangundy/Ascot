@@ -810,9 +810,32 @@
 
     /**
      * A function that only returns its context.
+     * @param {Variant} query If accessing an array, specifies which item to return.  If accessing
+     * a templated element or a module and a string is provided, performs a querySelector operation.
+     * no index is specified, returns the object
      */
-    function access() {
+    function access(query) {
         /* jshint validthis : true */
+        var el, elements;
+
+        // Return a specified index from an array
+        if (query !== undefined && Array.isArray) {
+            return this[query];
+
+        // Query an element
+        } else if (this.tagName) {
+            el = this;
+        } else {
+            el = this.element;
+        }
+
+        // Return either a single element or an array of elements
+        if (el && query) {
+            elements = el.querySelectorAll(query);
+            if (elements.length === 1) { return elements[0]; }
+            else { return elements; }
+        }
+
         return this;
     }
 
@@ -826,7 +849,9 @@
         /* jshint validthis : true, camelcase : false */
         var bundle     = Object.create({}, api);
         var submodules = bundle.submodules = {};
+        var settings   = bundle.settings = {};
         var isObject   = Ascot.utils.isObject;
+        var modSettings = ['data', 'options', 'template'];
 
         // Adjust for single argument
         if (name === Object(name)) {
@@ -837,11 +862,16 @@
         // If definition contains a bundle reference, do nothing--it is only a reference
         if (def.bundle) { return def; }
 
-        // Sort submodule bundles from bundle properties
+        // Sort submodule bundles from bundle/module properties
         for (var i in def) {
 
-            // Copy properties over to bundle
-            if (i in api) {
+            // Copy settings
+            if (modSettings.indexOf(i) >= 0) {
+                settings[i] = def[i];
+                delete def[i];
+
+            // Retain bundle properties
+            } else if (i in api) {
                 bundle[i] = def[i];
 
             // Copy submodule bundles
@@ -916,16 +946,34 @@
         module : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
-         * Settings to pass when constructing a module
+         * A controller to use when deploying a bundle
+         * @type {Function}
+         */
+        controller : { val : null, wrt : true, enm : true, cfg : false },
+
+        /**
+         * Settings for a module
          * @type {Object}
          */
         settings : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
-         * A controller to use when deploying a bundle
+         * A templating function to use
          * @type {Function}
          */
-        controller : { val : null, wrt : true, enm : true, cfg : false },
+        template : { val : null, wrt : true, enm : true, cfg : false },
+
+        /**
+         * Data to pass to a module
+         * @type {Variant}
+         */
+        data : { val : null, wrt : true, enm : true, cfg : false },
+
+        /**
+         * Options to pass to a modiule
+         * @type {Object}
+         */
+        options : { val : null, wrt : true, enm : true, cfg : false },
 
         /**
          * A list of submodules associated with a bundle
@@ -938,6 +986,12 @@
          * @type {Object}
          */
         target : { val : null, wrt : true, enm : true, cfg : false },
+
+        /**
+         * If set to false, array data will not be applied iteratively
+         * @type {Boolean}
+         */
+        iterate : { val : true, wrt : true, enm : false, cfg : false },
 
         /*************
          *  Methods  *
