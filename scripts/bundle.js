@@ -17,6 +17,10 @@
         if (typeof element === 'string') {
             target  = element;
             element = document;
+
+        // If just passed an element only, deploy directly
+        } else if (element.tagName && !accessor && !target) {
+            target = element;
         }
 
         // Use either a passed target or a target specified by a CSS selector
@@ -86,7 +90,7 @@
         var el, elements;
 
         // Return a specified index from an array
-        if (query !== undefined && Array.isArray) {
+        if (query !== undefined && Array.isArray(this)) {
             return this[query];
 
         // Query an element
