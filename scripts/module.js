@@ -202,6 +202,8 @@
         var module = Object.create({}, desc);
 
         if (settings) {
+            // TODO: Copy over all settings to module
+
             module._data    = settings.data;
             module.options  = settings.options;
             module.id       = settings.id;
