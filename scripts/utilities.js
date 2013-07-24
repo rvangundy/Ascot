@@ -146,7 +146,7 @@
             lastChild = target.insertBefore(child, lastChild || undefined);
         }
 
-        return newElement;
+        return target;
     }
 
     /**
