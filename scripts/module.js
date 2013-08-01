@@ -198,14 +198,12 @@
      */
     function createModule(settings, desc) {
         if (!desc) { throw new Error('Descriptor not provided'); }
-
-        var module = Object.create({}, desc);
+        var module  = Object.create({}, desc);
 
         if (settings) {
             // TODO: Copy over all settings to module
-
-            module._data    = settings.data;
-            module.options  = settings.options;
+            module._data    = settings.data || module.data;
+            module.options  = settings.options || module.options;
             module.id       = settings.id;
             module.template = settings.template || module.template;
 
@@ -352,7 +350,7 @@
          *  Methods  *
          *************/
 
-        destroy : { val : destroy, wrt : false, enm : true, cfg : false },
+        destroy   : { val : destroy,   wrt : false, enm : true, cfg : false },
 
         /***************
          *  Accessors  *

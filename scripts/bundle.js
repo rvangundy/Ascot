@@ -36,10 +36,6 @@
         if (this.module) {
             module = this.module(this.settings);
             module.element = target;
-
-        // Deploy as a template
-        } else if (this.settings.template) {
-            module = Ascot.utils.applyTemplate(target, this.settings.template, this.settings.data);
         }
 
         // Create an accessor if one has not already been created
@@ -151,6 +147,9 @@
                 delete def[i];
             }
         }
+
+        // Create a module for bundles which have not had one specified
+        if (!bundle.module) { bundle.module = Ascot.defineModule(settings); }
 
         // Register submodule bundles that are not named references
         for (var j in submodules) {
