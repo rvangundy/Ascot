@@ -184,7 +184,7 @@
      */
     Object.defineProperty(Ascot, '_bundles', {
         value        : {},
-        writable     : false,
+        writable     : true,
         enumerable   : false,
         configurable : false
     });

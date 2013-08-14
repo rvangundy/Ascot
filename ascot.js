@@ -13,6 +13,12 @@
 
     window.Ascot = Ascot;
 
+    if (window.define) {
+        window.define('Ascot', [], function(){
+            return Ascot;
+        });
+    }
+
 })(this||window);
 ;/* global Ascot */
 (function(window, undefined) {
@@ -917,7 +923,7 @@
      */
     Object.defineProperty(Ascot, '_bundles', {
         value        : {},
-        writable     : false,
+        writable     : true,
         enumerable   : false,
         configurable : false
     });

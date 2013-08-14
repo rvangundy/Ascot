@@ -13,4 +13,10 @@
 
     window.Ascot = Ascot;
 
+    if (window.define) {
+        window.define('Ascot', [], function(){
+            return Ascot;
+        });
+    }
+
 })(this||window);
