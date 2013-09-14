@@ -9,11 +9,11 @@ Function.prototype.bind = Function.prototype.bind || function (thisp) {
     };
 };
 
-/******************************
- *  Base Prototype Formation  *
- ******************************/
+/*******************************
+ *  Basic Object Construction  *
+ *******************************/
 
-module('Exhaustive Module Definition', {
+module('Ascot', {
     descriptorA : {
         enumerable   : true,
         configurable : true,
@@ -120,4 +120,39 @@ test('Appending mixin modifiers', function() {
 
     equal(mixedModuleB.propE, 14,
         'Function appended before iterator');
+});
+
+/******************
+ *  EventEmitter  *
+ ******************/
+
+module('EventEmitter', {
+    setup : function() {
+        var emitter = this.emitter = new ascot.EventEmitter();
+        var funcA = function(val) { this.valA = val; }.bind(this);
+        var funcB = function(val) { this.valB = val; }.bind(this);
+
+        emitter.on('test', funcA);
+        emitter.on('test', funcB);
+        emitter.emit('test', 5);
+        emitter.off('test', funcB);
+    }
+});
+
+test('Basic emitter functionality', function() {
+
+    equal(this.valA, 5,
+        'First event fired');
+
+    equal(this.valB, 5,
+        'Second event fired');
+
+    this.emitter.emit('test', 7);
+
+    equal(this.valB, 5,
+        'Second event removed');
+
+    equal(this.valA, 7,
+        'First event retained');
+
 });
