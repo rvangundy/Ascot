@@ -44,8 +44,23 @@ module.exports = function (grunt) {
                 separator: ';'
             },
             dist: {
-                src: ['scripts/ascot.js','scripts/utilities.js','scripts/module.js','scripts/bundle.js'],
+                src: ['scripts/ascot.js'],
                 dest: 'ascot.js'
+            }
+        },
+        bump: {
+            options: {
+                files              : ['package.json', 'bower.json'],
+                updateConfigs      : [],
+                commit             : false,
+                commitMessage      : 'Release v%VERSION%',
+                commitFiles        : ['package.json'],
+                createTag          : false,
+                tagName            : 'v%VERSION%',
+                tagMessage         : 'Version %VERSION%',
+                push               : false,
+                pushTo             : 'upstream',
+                gitDescribeOptions : '--tags --always --abbrev=1 --dirty=-d'
             }
         }
     });
@@ -58,6 +73,7 @@ module.exports = function (grunt) {
     grunt.registerTask('default', [
         'jshint',
         'test',
-        'concat'
+        'concat',
+        'bump'
     ]);
 };
