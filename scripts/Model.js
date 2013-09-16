@@ -139,32 +139,35 @@
      */
     function resolve(path) {
         var value = this;
+
         path = path.split('.');
 
+        for (var i=0, len=path.length; i<len; i+=1) {
             value = value[i];
+        }
 
         return value;
     }
 
     /**
      * Sets data on the model
-     * @param {String}         address An address to a location within the data model
-     * @param {Object|Variant} data    The new data
+     * @param {String}         path An path to a location within the data model
+     * @param {Object|Variant} data The new data
      */
     function set(/* arguments */) {
-        var address, addr, data, target, key;
+        var path, addr, data, target, key;
 
         // Adjust for arguments
         if (arguments.length === 2) {
-            address = arguments[0];
+            path = arguments[0];
             data    = arguments[1];
         } else {
             data = arguments[0];
         }
 
-        // Handle addressed data change
-        if (address) {
-            addr   = address;
+        // Handle path-referenced data change
+        if (path) {
+            addr   = path;
             addr   = addr.split('.');
             key    = addr.pop();
             target = this;
@@ -183,7 +186,7 @@
             }
         }
 
-        this.emit('change', { data : this, address : address });
+        this.emit('change', this, path);
     }
 
     /*********
@@ -197,9 +200,6 @@
         src          : { val : src,          wrt : true, enm : false, cfg : false },
         preferOnline : { val : preferOnline, wrt : true, enm : false, cfg : false },
 
-        store : store,
-        load  : load,
-        set   : set
         store   : store,
         load    : load,
         set     : set,
