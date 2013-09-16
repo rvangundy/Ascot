@@ -1,1013 +1,851 @@
-(function(window, undefined) {
+(function(global, undefined) {
     'use strict';
 
     /**
-     * The Ascot factory function.  Returns yet another factory function
-     * that can be used to create specific instances of a module.
-     * @param  {Object} desc An object describing a module's behavior
-     * @return {Function}    A factory function that creates a module
+     * The top-level ascot function.  Creates new prototypes by mixing together an array of prototypes
+     * and applying an expanded descriptor that includes mixin modifiers.
+     * @param  {Array}  mixins     An array of prototypes to mix in
+     * @param  {Object} descriptor A property descriptor
+     * @return {Object}            A new object prototype
      */
-    var Ascot = function(desc) {
-        return Ascot.defineModule(desc);
-    };
+    function ascot(/* arguments */) {
+        var mixins, descriptor, constructor, item;
 
-    window.Ascot = Ascot;
+        // Establish appropriate arguments
+        if (arguments.length === 2) {
+            mixins     = arguments[0];
+            descriptor = arguments[1];
+        } else {
+            mixins     = [];
+            descriptor = arguments[0];
+        }
 
-    if (window.define) {
-        window.define('Ascot', [], function(){
-            return Ascot;
-        });
+        descriptor = descriptor || {};
+
+        // Collect each prototype's descriptor
+        for (var i=0, len=mixins.length; i<len; i+=1) {
+            item = mixins[i];
+
+            // Allow for string references to base ascot classes
+            item = mixins[i] = typeof item === 'string' ? ascot[item] : item;
+            mixins[i] = item.descriptor;
+        }
+
+        // Expand and add current descriptor to mixins
+        for (var j in descriptor) {
+            descriptor[j] = expandDescriptor(descriptor[j]);
+        }
+
+        mixins.push(descriptor);
+
+        // Form a new constructor
+        constructor = createConstructor();
+        constructor.descriptor = combineDescriptors(mixins);
+
+        return constructor;
     }
 
-})(this||window);
-;/* global Ascot */
-(function(window, undefined) {
-    'use strict';
+    /******************
+     *  Construction  *
+     ******************/
+
+    /**
+     * Creates a new constructor that may be used to create objects with the 'new' keyword
+     * @return {Function} A standard constructor function
+     */
+    function createConstructor() {
+        function constructor(/* arguments */) {
+            /* jshint validthis : true */
+            Object.defineProperties(this, constructor.descriptor);
+
+            if (this.construct) { this.construct.apply(this, arguments); }
+        }
+
+        constructor.prototype = {};
+
+        return constructor;
+    }
 
     /*****************
      *  Descriptors  *
      *****************/
 
     /**
-     * Determines if an object is a valid descriptor
-     * @param  {Object}  obj A proposed descriptor
-     * @return {Boolean}     True if obj is a descriptor
+     * Expands a shorthand descriptor to a formal descriptor.  A shorthand descriptor consists
+     * of three-character abbreviations of 'writable', 'configurable', etc. in the form :
+     * wrt, cfg, enm, val along with the normal get & set.  Additionally, properties for which
+     * a property descriptor has not been set get a default descriptor.
+     * @param {Object} descriptor A shorthand descriptor
      */
-    function isDescriptor(obj) {
-        if (obj === Object(obj)) {
-            if ('value' in obj ||
-                'writable' in obj ||
-                'configurable' in obj ||
-                'enumerable' in obj ||
-                'get' in obj ||
-                'set' in obj ||
-                'val' in obj ||
-                'wrt' in obj ||
-                'cfg' in obj ||
-                'enm' in obj) {
-                return true;
+    function expandDescriptor(descriptor) {
+        var newDescriptor = {};
+
+        if (!descriptor) { return; }
+
+        // Expand the descriptor if the argument is a valid descriptor
+        if (isDescriptor(descriptor)) {
+            for (var i in descriptor) {
+                switch (i) {
+
+                case 'enm' :
+                    newDescriptor.enumerable = descriptor[i];
+                    break;
+
+                case 'cfg' :
+                    newDescriptor.configurable = descriptor[i];
+                    break;
+
+                case 'wrt' :
+                    newDescriptor.writable = descriptor[i];
+                    break;
+
+                case 'val' :
+                    newDescriptor.value = descriptor[i];
+                    break;
+
+                default :
+                    newDescriptor[i] = descriptor[i];
+                    break;
+                }
+            }
+
+            return newDescriptor;
+        }
+
+        // Create a default desciptor
+        else {
+            return {
+                writable     : true,
+                enumerable   : true,
+                configurable : true,
+                value        : descriptor
+            };
+        }
+    }
+
+    /**
+     * Creates a new prototype from a set of property descriptor objects.  The prototype
+     * is the result from a
+     * @param {Array} descriptors An array of expanded descriptors.
+     */
+    function combineDescriptors(descriptors) {
+        var desc;
+        var newDescriptor = {};
+
+        for (var i=0, len=descriptors.length; i<len; i+=1) {
+            desc = descriptors[i];
+
+            for (var j in desc) {
+                newDescriptor[j] = appendDescriptor(j, newDescriptor[j], desc[j]);
             }
         }
+
+        return newDescriptor;
+    }
+
+    /**
+     * Appends a descriptor to a target descriptor
+     * @param {String} propertyName The name of the property associated with this descriptor
+     * @param {Object} target       A target descriptor to append to
+     * @param {Object} descriptor   An expanded descriptor including mixin modifiers
+     */
+    function appendDescriptor(propertyName, target, descriptor) {
+        var modifier;
+        var isNew = !target;
+
+        target = target || {};
+
+        for (var i in descriptor) {
+
+            // Retain mixin modifiers
+            if (i.indexOf('$') >= 0) {
+                modifier       = {};
+                modifier.key   = i;
+                modifier.value = target[i] = descriptor[i];
+            }
+
+            // Copy over normal descriptor properties
+            else {
+                target[i] = deepCopy(descriptor[i]);
+            }
+        }
+
+        if (modifier) {
+            applyModifier(propertyName, target, modifier);
+        }
+
+        else if (!modifier && !isNew) {
+            throw new Error('Attempted to overwrite an existing property without a modifier. Apply a modifier or use $override.');
+        }
+
+        return target;
+    }
+
+    /*********************
+     *  Mixin Modifiers  *
+     *********************/
+
+    /**
+     * Applies a modifier to a descriptor, creating appropriate iterators or appending/prepending
+     * to existing methods.
+     * @param {String} propertyName The name of the property associated with this descriptor
+     * @param {Objects} descriptor A target descriptor to modify
+     * @param {Object}  modifier   A key and value describing a particular modifier
+     */
+    function applyModifier(propertyName, descriptor, modifier) {
+        var calls;
+        var val = descriptor.value;
+
+        switch (modifier.key) {
+
+        case '$chain' :
+            calls = processCalls(propertyName, modifier.value);
+            descriptor.value = createChain(calls);
+            break;
+
+        case '$iterate' :
+            calls = processCalls(propertyName, modifier.value);
+            descriptor.value = createIterator(calls);
+            break;
+
+        case '$before' :
+            descriptor.value = prependIterator(val, modifier.value);
+            break;
+
+        case '$after' :
+            descriptor.value = appendIterator(val, modifier.value);
+            break;
+
+        default :
+            break;
+        }
+    }
+
+    /**
+     * Processes passed calls from a iterator property descriptor.  If an item is a
+     * constructor, a function of the given name is sought on a descriptor and used instead.
+     * @param  {String}   name  The name of the method to iterate
+     * @param  {Array}    items Objects and functions composing the iterator
+     * @return {Array}       The new iterator
+     */
+    function processCalls(name, items) {
+        var item;
+        var calls = [];
+
+        // Add each item to the iterator
+        for (var i=0, len=items.length; i<len; i+=1) {
+            item = items[i];
+
+            if (!item) { continue; }
+
+            // Seek a function within a prototype and add to the iterator
+            if (item.descriptor && typeof item.descriptor[name].value === 'function') {
+                calls.push(item.descriptor[name].value);
+            }
+
+            // Add functions to the iterator directly
+            else if (typeof item === 'function') {
+                calls.push(item);
+            }
+        }
+
+        return calls;
+    }
+
+    /**
+     * Creates and returns a chaining iterator
+     * @param {Array} calls A list of calls associated with the iterator
+     */
+    function createChain(calls) {
+
+        // Create the iterator method that chains through each call
+        function iterator() {
+            /* jshint validthis : true */
+            var args  = Array.prototype.slice.call(arguments, 0);
+            var calls = iterator._calls;
+
+            for (var j=0, jLen=calls.length; j<jLen; j+=1) {
+                args[0] = calls[j].apply(this, args);
+            }
+
+            return args[0];
+        }
+
+        iterator._calls = calls;
+
+        return iterator;
+    }
+
+    /**
+     * Creates and returns a chaining iterator
+     * @param {Array} calls A list of calls associated with the iterator
+     */
+    function createIterator(calls) {
+
+        // Create the iterator method that chains through each call
+        function iterator() {
+            /* jshint validthis : true */
+            var val;
+            var args  = Array.prototype.slice.call(arguments, 0);
+            var calls = iterator._calls;
+
+            for (var j=0, jLen=calls.length; j<jLen; j+=1) {
+                val = calls[j].apply(this, args);
+            }
+
+            return val;
+        }
+
+        iterator._calls = calls;
+
+        return iterator;
+    }
+
+    /**
+     * Prepends a function to an existing iterator.  Creates an iterator if one had not
+     * yet been created.
+     * @param  {Function} iterator An existing iterator function
+     * @param  {Function} fn       A function to append
+     * @return {Function}          iterator
+     */
+    function prependIterator(iterator, fn) {
+        var calls = Array.prototype.slice.call(iterator._calls, 0);
+
+        if (typeof iterator !== 'function') {
+            return fn;
+        }
+
+        // Prepend to an existing iterator
+        if (calls) {
+            calls.splice(0, 0, fn);
+            iterator._calls = calls;
+        }
+
+        // Create a new iterator if one had not been created
+        else {
+            iterator = createIterator([fn, iterator]);
+        }
+
+        return iterator;
+    }
+
+    /**
+     * Appends a function to an existing iterator.  Creates an iterator if one had not
+     * yet been created.
+     * @param  {Function} iterator An existing iterator function
+     * @param  {Function} fn       A function to append
+     * @return {Function}          iterator
+     */
+    function appendIterator(iterator, fn) {
+        var calls = Array.prototype.slice.call(iterator._calls, 0);
+
+        if (typeof iterator !== 'function') {
+            return fn;
+        }
+
+        // Prepend to an existing iterator
+        if (calls) {
+            calls.push(fn);
+            iterator._calls = calls;
+        }
+
+        // Create a new iterator if one had not been created
+        else {
+            iterator = createIterator([iterator, fn]);
+        }
+
+        return iterator;
+    }
+
+    /***************
+     *  Utilities  *
+     ***************/
+
+    /**
+     * Determines if an object is a descriptor
+     * @param {Object} obj A proposed descriptor
+     */
+    function isDescriptor(obj) {
+        if (!obj || obj !== Object(obj)) { return false; }
+
+        if (
+            'enm' in obj ||
+            'cfg' in obj ||
+            'wrt' in obj ||
+            'val' in obj ||
+            'enumerable' in obj ||
+            'configurable' in obj ||
+            'writable' in obj ||
+            'value' in obj ||
+            'get' in obj ||
+            'set' in obj ||
+            '$chain' in obj ||
+            '$iterate' in obj ||
+            '$before' in obj ||
+            '$after' in obj ||
+            '$override' in obj
+            )
+        { return true; }
 
         return false;
     }
 
     /**
-     * Expands the descriptor properties from their shorthand names
-     * to the formal names.
-     * @param  {Object} desc A descriptor object
-     * @return {Object}      desc
+     * Copies the passed item, regardless of data type.  Objects and arrays are
+     * copied by value and not by reference.
+     * @param {Variant} item Something to copy
      */
-    function expandDescriptor(desc) {
+    function deepCopy(item) {
+        var copy;
 
-        // Recursively expand until a descriptor is found
-        if (!isDescriptor(desc)) {
-            for (var i in desc) {
-                desc[i] = expandDescriptor(desc[i]);
-            }
-        }
-
-        if ('val' in desc) {
-            desc.value = desc.val;
-            delete desc.val;
-        }
-
-        if ('wrt' in desc) {
-            desc.writable = desc.wrt;
-            delete desc.wrt;
-        }
-
-        if ('cfg' in desc) {
-            desc.configurable = desc.cfg;
-            delete desc.cfg;
-        }
-
-        if ('enm' in desc) {
-            desc.enumerable = desc.enm;
-            delete desc.enm;
-        }
-
-        return desc;
-    }
-
-    /**
-     * Creates a default descriptor corresponding to a value.  By default,
-     * properties are set to non-enumerable.
-     * @param  {Variant} value Any value
-     * @return {Object}        A default descriptor
-     */
-    function createDefaultDescriptor(value) {
-        return {
-            value        : value,
-            writable     : true,
-            configurable : true,
-            enumerable   : false
-        };
-    }
-
-    /********************
-     *  Type Utilities  *
-     ********************/
-
-    /**
-     * Determines if the target is a function
-     * @param  {Object} obj An object to test
-     * @return {Boolean}    True if obj is a function
-     */
-    function isFunction(obj) {
-        return Object.prototype.toString.call(obj) === '[object Function]';
-    }
-
-    /**
-     * Determine if an object is an object
-     * @param  {Object}  obj The object to check
-     * @return {Boolean}     True if obj is an object
-     */
-    function isObject(obj) {
-        return obj === Object(obj);
-    }
-
-    /****************
-     *  Templating  *
-     ****************/
-
-    /**
-     * Takes a string of HTML and converts it to an actual DOM element
-     * @private
-     * @param  {String} htmlString An HTML string with a single root element
-     * @return {Element}           An HTML element
-     */
-    function htmlStringToElement(htmlString) {
-        var div = document.createElement('div');
-        div.innerHTML = htmlString;
-        return div.children[0];
-    }
-
-    /**
-     * Applies a template to a target.  Creates a new element based on a template,
-     * then merges it with the target element.  The newly created top-level element
-     * is returned, although is excluded from being inserted in to the document.
-     * @param  {Element}  target   A target element
-     * @param  {Function} template A templating function
-     * @param  {Object}   data     The data passed to the template function
-     * @return {Element}           The top-level templated element
-     */
-    function applyTemplate(target, template, data) {
-        var child, lastChild, className;
-        var newElement = Ascot.utils.htmlStringToElement(template(data || undefined));
-
-        removeChildren(target);
-
-        // Copy classes from top-level templated element to target element
-        className = Ascot.utils.mergeClassLists(newElement.className, target.className);
-        if (className) { target.className = className; }
-
-        // Move all child module elements in to target element
-        for (var i=newElement.childNodes.length-1; i>=0; i-=1) {
-            child     = newElement.removeChild(newElement.childNodes[i]);
-            lastChild = target.insertBefore(child, lastChild || undefined);
-        }
-
-        return target;
-    }
-
-    /**
-     * Removes all child elements from a target element
-     * @param  {Element} element An HTML element
-     * @return {Element}         element
-     */
-    function removeChildren(element) {
-        for (var i=element.childNodes.length-1; i>=0; i-=1) {
-            element.removeChild(element.childNodes[i]);
-        }
-
-        return element;
-    }
-
-    /**
-     * Merges together two lists of classes in to a single class list
-     * @param  {String} classListA A space-separated list of class names
-     * @param  {String} classListB A space-separated list of class names
-     * @return {String}            A merged list of class names
-     */
-    function mergeClassLists(classListA, classListB) {
-        var newList, name;
-
-        classListA = classListA.split(' ');
-        classListB = classListB.split(' ');
-
-        newList = [].concat(classListA);
-
-        for (var i=0; i<classListB.length; i+=1) {
-            name = classListB[i];
-
-            if (newList.indexOf(name) < 0) {
-                newList.push(name);
-            }
-        }
-
-        newList = newList.join(' ').trim();
-
-        return newList === '' ? undefined : newList;
-    }
-
-    /*************************
-     *  Object Manipulation  *
-     *************************/
-
-    /**
-     * Performs a recursive copy of any data.  All data as
-     * well as child data is returned by value rather than
-     * by reference.
-     * @param  {Variant} obj The data to copy
-     * @return {Variant}     A new copy of the data
-     */
-    function deepCopy(obj) {
-        var copy, i;
-
-        // Copy a function
-        if (isFunction(obj)) {
-            copy = obj;
-
-        // Recursively copy an array
-        } else if (Array.isArray(obj)) {
+        // Recursively copy arrays
+        if (Array.isArray(item)) {
             copy = [];
-            for (i=0; i<obj.length; i+=1) {
-                copy[i] = deepCopy(obj[i]);
+
+            for (var i=0, len=item.length; i<len; i+=1) {
+                copy.push(deepCopy(item[i]));
             }
 
-        // Recursively copy an object
-        } else if (isObject(obj)) {
+            return copy;
+        }
+
+        // Recursively copy objects
+        else if (item === Object(item) && typeof item !== 'function') {
             copy = {};
-            for (i in obj) {
-                copy[i] = deepCopy(obj[i]);
+
+            for (var j in item) {
+                copy[j] = deepCopy(item[j]);
             }
 
-        // Copy all other types
-        } else {
-            copy = obj;
+            return copy;
         }
 
-        return copy;
+        // Just return the value
+        return item;
+    }
+
+    /*************
+     *  Exports  *
+     *************/
+
+    if (window && window.define) {
+        define('ascot', [], function() { return ascot; });
+    } else {
+        global.ascot = ascot;
+    }
+
+})(this||window);
+;(function(global, undefined) {
+    'use strict';
+
+    /**
+     * Registers an event listener on the specified target
+     * @param {String}   eventName The name of the event
+     * @param {Function} cb        The new callback to handle the event
+     */
+    function on(eventName, cb) {
+        var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
+
+        // Do nothing if a callback has already been added
+        if (callbacks.indexOf(cb) >= 0) { return; }
+
+        // Add the callback to the list of callbacks
+        callbacks.push(cb);
     }
 
     /**
-     * Extends a target object with items from a new object
-     * @param {Object}  target    The object to extend
-     * @param {Object}  obj       The object with new items
-     * @param {Boolean} overwrite If true, will overwrite existing properties on target
-     * @return {Object}        target
+     * Registers an event listener on the specified target
+     * @param {String}   eventName The name of the event
+     * @param {Function} cb        The new callback to handle the event
      */
-    function deepExtend(target, obj, overwrite) {
-        var i;
+    function off(eventName, cb) {
+        var index;
+        var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
 
-        // Copy a function
-        if (isFunction(obj)) {
-            if (overwrite && target) { target = obj; }
-            else if (target===undefined || target===null) { target = obj; }
+        // Remove the callback from the list
+        index = callbacks.indexOf(cb);
 
-        // Recursively copy an array
-        } else if (Array.isArray(obj)) {
-            target = target || [];
-            for (i=0; i<obj.length; i+=1) {
-                target[i] = deepExtend(target[i], obj[i], overwrite);
-            }
-
-        // Recursively copy an object
-        } else if (isObject(obj)) {
-            target = target || {};
-            for (i in obj) {
-                target[i] = deepExtend(target[i], obj[i], overwrite);
-            }
-
-        // Copy all other types
-        } else {
-            if (overwrite && target) { target = obj; }
-            else if (target===undefined || target===null) { target = obj; }
-        }
-
-        return target;
+        if (index >= 0) { callbacks.splice(index, 1); }
     }
 
-    /*******************
-     *  URL Utilities  *
-     *******************/
+    /**
+     * Removes all event listeners from the emitter
+     */
+    function removeAllListeners() {
+        this.eventListeners = [];
+    }
 
     /**
-     * Retrieves parameters from the URL query string
-     * @return {Object} An object containing all query parameters
+     * Emits the specified event, calling and passing the optional argument to all listeners
+     * @param {String}  eventName The name of the event to emit
+     * @param {Variant} arg       Any argument to pass to the event listeners
      */
-    function getQueryParameters() {
-        var params,
-            match,
-            pl     = /\+/g,  // Regex for replacing addition symbol with a space
-            search = /([^&=]+)=?([^&]*)/g,
-            decode = function (s) { return decodeURIComponent(s.replace(pl, ' ')); },
-            query  = window.location.search.substring(1);
+    function emit(eventName, arg) {
+        var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
 
-        params = {};
-        match = search.exec(query);
-        while (match) {
-            params[decode(match[1])] = decode(match[2]);
-            match = search.exec(query);
+        for (var i=0, len=callbacks.length; i<len; i+=1) {
+            callbacks[i].call(this, arg);
         }
-
-        return params;
     }
 
     /*********
      *  API  *
      *********/
 
-    Ascot.utils = {};
+    var EventEmitter = ascot({
+        on                 : on,
+        off                : off,
+        removeAllListeners : removeAllListeners,
+        emit               : { val : emit, wrt : false, enm : false, cfg : false },
 
-    Object.defineProperties(Ascot.utils, {
-
-        isDescriptor            : { value : isDescriptor },
-        expandDescriptor        : { value : expandDescriptor },
-        createDefaultDescriptor : { value : createDefaultDescriptor },
-        isFunction              : { value : isFunction },
-        isObject                : { value : isObject },
-        htmlStringToElement     : { value : htmlStringToElement },
-        applyTemplate           : { value : applyTemplate },
-        removeChildren          : { value : removeChildren },
-        deepCopy                : { value : deepCopy },
-        deepExtend              : { value : deepExtend },
-        getQueryParameters      : { value : getQueryParameters },
-        mergeClassLists         : { value : mergeClassLists }
-
+        eventListeners : { val : {}, wrt : true, enm : false, cfg : false }
     });
 
-}(this||window));
-;/* global Ascot */
-(function(window, undefined) {
+    /*************
+     *  Exports  *
+     *************/
+
+    if (window && window.define) {
+        define('ascot.EventEmitter', ['ascot'], function(ascot) {
+            ascot.EventEmitter = EventEmitter;
+            return EventEmitter;
+        });
+    } else {
+        global.ascot.EventEmitter = EventEmitter;
+    }
+
+})(this||window);
+;(function(global, undefined) {
     'use strict';
 
-    /*****************
-     *  API Methods  *
-     *****************/
+    /****************
+     *  Properties  *
+     ****************/
 
     /**
-     * Applies the module to specified DOM element
-     * @param  {Element} target An element on which to apply a module
+     * Whether to store and retrieve this model from local storage
+     * @type {Boolean}
      */
-    function deploy(target) {
-        var newElement;
+    var storeLocal = true;
 
-        /* jshint validthis : true, camelcase : false */
-        if (!target) { return this; }
+    /**
+     * The remote location of the data source for retrieval using XMLHttpRequest
+     * @type {String}
+     */
+    var src = null;
 
-        // Use a template to render a new element
-        if (this.template) {
-            newElement = Ascot.utils.applyTemplate(target, this.template, this.data);
-            target.id  = this.id || newElement.id || target.id;
+    /**
+     * Whether to always attempt updating from the online location rather than retreive
+     * from localStorage
+     * @type {Boolean}
+     */
+    var preferOnline = false;
 
-        // If no template, don't attempt to render a new element
-        } else {
-            target.id = this.id || target.id;
-        }
+    /******************
+     *  Construction  *
+     ******************/
 
-        // Establish the element as a member of the module
-        this._element = target;
+    /**
+     * Constructs the model, establishing and loading its data source
+     * @param {String} src The data source associated with this model
+     */
+    function construct(src) {
+        if (src) { this.load(src); }
+    }
 
-        return this;
+    /**********************************
+     *  Loading, Storing, Retrieving  *
+     **********************************/
+
+    /**
+     * Stores the model to local storage.  Stored as a key/value pair where
+     * the key is the src of the data and the value is a JSON string.
+     */
+    function store() {
+        localStorage[src] = JSON.stringify(this);
     }
 
     /**
-     * Destroys the module.  Also removes any associated elements from
-     * the document.  Runs shutdown function if available.
-     * @method destroy
-     * @return {Object} This for chaining
+     * Loads the data either from a server or from local storage depending on settings and
+     * online status
+     * @param {String} src Optionally specify the source of the data
      */
-    function destroy() {
-        /* jshint validthis : true, camelcase : false */
+    function load(src) {
+        this.src = src || this.src;
 
-        // Perform optional shutdown sequence
-        if (this.shutdown) {
-            this.shutdown(this._element);
+        if (localStorage[src] && !this.preferOnline) {
+            setTimeout(loadLocalData.bind(this), 0);
+        } else {
+            loadRemoteData.call(this);
         }
-
-        // Remove the element from the DOM
-        if (this._element && this._element.parentNode) {
-            this._element.parentNode.removeChild(this._element);
-        }
-
-        return this;
     }
 
-    /*******************
-     *  Data Handling  *
-     *******************/
+    /**
+     * Parses a json string and merges data with this model
+     * @param {String} json
+     */
+    function loadLocalData() {
+        var localData = localStorage[this.src];
+
+        if (localData) { parse.call(this, localData); }
+
+        this.emit('load', this);
+    }
 
     /**
-     * Merges incoming data; fragments, strings, etc. in to the
-     * module's data.  Calls either update or a templating function if available.
-     * @param  {Object|String} newData Some new data or a fragment to merge
-     * @return {Object}        data
+     * Parses passed json data
+     * @param {String} json A valid JSON string
      */
-    function updateData(newData) {
-        /* jshint validthis : true, camelcase : false */
-        var firstItem;
-        var data = this._data;
+    function parse(json) {
+        var data = JSON.parse(json);
 
-        // Convert a JSON string to an object
-        if (typeof newData === 'string') {
-            newData = JSON.parse(newData);
-        } else if (!newData) {
-            return;
+        for (var i in data) { this[i] = data[i]; }
+    }
+
+    /**
+     * Loads data from the server.  If the request fails, attempts loading data from localStorage.
+     */
+    function loadRemoteData() {
+        var src = this.src;
+        var xhr = new XMLHttpRequest();
+
+        xhr.open('GET', src);
+        xhr.onreadystatechange = handleXHRResponse.bind(this, xhr);
+        xhr.send(null);
+    }
+
+    /**
+     * Handles incoming XHR responses
+     */
+    function handleXHRResponse(xhr) {
+        var type, text;
+
+        // Request was successful
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            type = xhr.getResponseHeader('Content-Type');
+
+            // Make sure response is JSON
+            if (type.indexOf('json') >= 0) {
+                text = xhr.responseText;
+
+                // Parse and load
+                parse.call(this, text);
+
+                // Store data locally
+                if (this.storeLocal) { this.store(); }
+
+                this.emit('load', this);
+            }
+
+        // Request failed, attempt loading locally instead
+        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+            loadLocalData.call(this);
         }
+    }
 
-        // If data is an ID reference, set its data directly
-        firstItem = Object.keys(newData)[0];
-        if (firstItem && firstItem.indexOf('#') === 0) {
-            setDataValue(this._data, firstItem, newData[firstItem]);
+    /********************
+     *  Data Accessors  *
+     ********************/
 
-        // Merge data
+    /**
+     * Sets data on the model
+     * @param {String}         address An address to a location within the data model
+     * @param {Object|Variant} data    The new data
+     */
+    function set(/* arguments */) {
+        var address, addr, data, target, key;
+
+        // Adjust for arguments
+        if (arguments.length === 2) {
+            address = arguments[0];
+            data    = arguments[1];
         } else {
-            mergeData(data, newData);
+            data = arguments[0];
         }
 
-        // Call custom update method
+        // Handle addressed data change
+        if (address) {
+            addr   = address;
+            addr   = addr.split('.');
+            key    = addr.pop();
+            target = this;
+
+            for (var i=0, len=addr.length; i<len; i+=1) {
+                target = target[addr[i]];
+            }
+
+            target[key] = data;
+        }
+
+        // Handle full data change
+        else {
+            for (var j in data) {
+                this[j] = data[j];
+            }
+        }
+
+        this.emit('change', { data : this, address : address });
+    }
+
+    /*********
+     *  API  *
+     *********/
+
+    var Model = ascot(['EventEmitter'], {
+        construct : construct,
+
+        storeLocal   : { val : storeLocal,   wrt : true, enm : false, cfg : false },
+        src          : { val : src,          wrt : true, enm : false, cfg : false },
+        preferOnline : { val : preferOnline, wrt : true, enm : false, cfg : false },
+
+        store : store,
+        load  : load,
+        set   : set
+    });
+
+    /*************
+     *  Exports  *
+     *************/
+
+    if (window && window.define) {
+        define('ascot.Model', ['ascot'], function(ascot) {
+            ascot.Model = Model;
+            return Model;
+        });
+    } else {
+        global.ascot.Model = Model;
+    }
+
+})(this||window);
+;(function(global, undefined) {
+    'use strict';
+
+    /**
+     * Constructs the DOMView, establishing its data and template and performing
+     * an initial rendering.
+     * @param {Variant}  data     The data associated with this view
+     * @param {Function} template An HTML templating function
+     */
+    function construct(data, template) {
+        this._data    = data     || this._data;
+        this.template = template || this.template;
+        render.call(this);
+    }
+
+    /**
+     * Renders the DOMView using the available template. On rendering, a new element is created,
+     * and must be added to the DOM.
+     */
+    function render() {
+        var div = document.createElement('div');
+
+        div.innerHTML = this.template(this.data);
+        this.element  = div.firstChild;
+    }
+
+    /*************
+     *  Handles  *
+     *************/
+
+    /**
+     * Establishes accessors to specific elements or sets of elements within this view.
+     * Handles are set using a hash map that associates handles with DOM query selector strings.
+     * @param {Object} handles A hash map of handles
+     */
+    function setHandles(handles) {
+        var _handles = this._handles;
+
+        for (var i in handles) {
+            Object.defineProperty(this, i, {
+                get          : getElementBySelector.bind(this, handles[i]),
+                enumerable   : true,
+                configurable : true
+            });
+
+            _handles[i] = handles[i];
+        }
+    }
+
+    /**
+     * Returns a set of current handles
+     */
+    function getHandles() {
+        return this._handles;
+    }
+
+    /**
+     * Gets a single element by query selector.  The element retrieved is relative
+     * to this view's element.
+     * @param {String} selector A query selector string
+     */
+    function getElementBySelector(selector) {
+        var el = this.element;
+
+        return el.querySelector(selector);
+    }
+
+    /***************
+     *  Accessors  *
+     ***************/
+
+    /**
+     * Sets the view's data, updating the view accordingly
+     * @param {Variant} data The data associated with the view
+     */
+    function setData(data) {
+        var el     = this.element;
+        var parent = el.parentNode;
+
+        this._data = data;
+
+        // Use update methods if available
         if (this.update) { this.update(data); }
-        else if (this.template) { Ascot.utils.applyTemplate(this.element, this.template, data); }
 
-        return data;
+        // Otherwise, re-render using a template and swap elements
+        else if (this.template) {
+            render.call(this);
+            if (parent) { parent.replaceChild(this.element, el); }
+        }
     }
 
     /**
-     * Recursively merges newData with data
-     * @param {Object} data    Target data to merge in to
-     * @param {Object} newData New data to merge
-     * @return         data
+     * Gets the current view's data property
      */
-    function mergeData(data, newData) {
-        var isObject = Ascot.utils.isObject;
-
-        for (var i in newData) {
-            if (isObject(newData[i])) {
-                data[i] = isObject(data[i]) ? data[i] : {};
-                data[i] = mergeData(data[i], newData[i]);
-            } else {
-                data[i] = newData[i];
-            }
-        }
-
-        return data;
+    function getData() {
+        return this._data;
     }
 
-    /**
-     * Sets a specific value on an addressed key/value pair inside a data structure
-     * @param {Object}  data    The target data object on which to set a value
-     * @param {String}  address An address to a specific key/value pair
-     * @param {Variant} value   A new value
-     */
-    function setDataValue(data, address, value) {
-        var target, id, key;
+    /*********
+     *  API  *
+     *********/
 
-        // Resolve an address
-        if (address.indexOf('#/') === 0) {
-            address = address.split('/');
-            address.shift();
-            key = address.pop();
-            target = resolveItem(data, address);
+    var DOMView = ascot(['EventEmitter'], {
+        construct : { val : construct, wrt : false, enm : false, cfg : false },
 
-        // Resolve an ID address
-        } else if (address.indexOf('#') === 0) {
-            address = address.split('/');
-            key = address.pop();
-            id = address.shift().slice(1);
-            target = getItemByID(data, id);
-            target = resolveItem(target, address);
+        data     : { get : getData, set : setData, enm : true,  cfg : true  },
+        _data    : { val : null,    wrt : true,    enm : false, cfg : false },
+        element  : { val : null,    wrt : true,    enm : true,  cfg : false },
+        template : { val : null,    wrt : true,    enm : true,  cfg : false },
 
-        // Perform a default resolve
-        } else {
-            address = address.split('/');
-            key = address.pop();
-            target = resolveItem(data, address);
-        }
+        // Handles
+        handles  : { get : getHandles, set : setHandles, enm : true,  cfg : true  },
+        _handles : { val : {},         wrt : true,       enm : false, cfg : false },
 
-        target[key] = value;
-    }
-
-    /**
-     * Resolves an item by address.
-     * @param {Object}  data    A data object within which to resolve
-     * @param {Array}   address An array of keys to the specified item
-     * @return {Object}         The resolved item
-     */
-    function resolveItem(data, address) {
-        var key = address.shift();
-
-        for (var i in data) {
-            if (i === key) {
-                return resolveItem(data[i], address);
-            }
-        }
-
-        return data;
-    }
-
-    /**
-     * Searches through data and returns an object with a specified ID
-     * @param {Object} data The data to query
-     * @param {} [varname] [description]
-     */
-    function getItemByID(data, id) {
-        var item;
-        var isObject = Ascot.utils.isObject;
-
-        // Recursively attempt to find an item with the specified id
-        for (var i in data) {
-            if (isObject(data[i])) {
-                if (data[i].id === id) { return data[i]; }
-                item = getItemByID(data[i], id);
-                if (item && item.id === id) { return item; }
-            }
-        }
-
-        return false;
-    }
-
-    /*********************
-     *  Module Creation  *
-     *********************/
-
-    /**
-     * Creates a module
-     * @param {Object} settings Module settings
-     * @param {Object} desc     A descriptor
-     */
-    function createModule(settings, desc) {
-        if (!desc) { throw new Error('Descriptor not provided'); }
-        var module  = Object.create({}, desc);
-
-        if (settings) {
-            // TODO: Copy over all settings to module
-            module._data    = settings.data || module.data;
-            module.options  = settings.options || module.options;
-            module.id       = settings.id;
-            module.template = settings.template || module.template;
-
-            // Setting the element auto-deploys, so do not attempt unless
-            // an element is provided
-            if (settings.element) {
-                module.element = settings.element;
-            }
-        }
-
-        return module;
-    }
-
-    /**
-     * Defines a new module, which is a combination of the module
-     * descriptor and the descriptor passed as a parameter to the
-     * createModule method.
-     * @param  {Object} desc A descriptor to use as the basis for the module
-     * @return {Function}    A factory function used to create a module instance
-     */
-    Ascot.defineModule = function(desc) {
-        var copy, priv;
-        var deepCopy                = Ascot.utils.deepCopy;
-        var isDescriptor            = Ascot.utils.isDescriptor;
-        var expandDescriptor        = Ascot.utils.expandDescriptor;
-        var createDefaultDescriptor = Ascot.utils.createDefaultDescriptor;
-        var newDescriptor           = deepCopy(api);
-
-        desc = desc || {};
-
-        // Creates a single compiled descriptor
-        for (var i in desc) {
-            copy = deepCopy(desc[i]);
-
-            // Sets values for existing module API properties
-            if (i in newDescriptor) {
-                priv = '_' + i;
-
-                // Set the value of the property
-                if ('value' in newDescriptor[i]) {
-                    if (isDescriptor(copy)) {
-                        newDescriptor[i] = copy;
-                    } else {
-                        newDescriptor[i].value = copy;
-                    }
-
-                // Set the private alternative to the value
-                } else if (priv in newDescriptor) {
-                    if (isDescriptor(copy)) {
-                        newDescriptor[priv] = copy;
-                    } else {
-                        newDescriptor[priv].value = copy;
-                    }
-                }
-
-            // Adds new properties to the API
-            } else {
-                if (isDescriptor(copy)) {
-                    newDescriptor[i] = expandDescriptor(copy);
-                } else {
-                    newDescriptor[i] = createDefaultDescriptor(copy);
-                }
-            }
-        }
-
-        // Return a factory function for creating the module
-        return function(settings) {
-            return createModule(settings, newDescriptor);
-        };
-    };
-
-    /******************
-     *  API Settings  *
-     ******************/
-
-    var api = Ascot.utils.expandDescriptor({
-
-        /* jshint camelcase: false */
-
-        /********************
-         *  API Properties  *
-         ********************/
-
-        /**
-         * An ID that is copied over to a target element
-         * @type {String}
-         */
-        id : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * The current element associated with the module
-         * @type {Element}
-         */
-        _element : { val : null, wrt : true, cfg : false, enm : false },
-
-        /**
-         * The data associated with the module
-         * @type {Element}
-         */
-        _data : { val : {}, wrt : true, cfg : false, enm : false },
-
-        /**
-         * All options related to this module
-         * @type {Object}
-         */
-        _options : { val : {}, wrt : false, cfg : false, enm : false },
-
-        /*************************
-         *  Method Placeholders  *
-         *************************/
-
-        /**
-         * A templating function that is used to generate the module's
-         * DOM.  Run on application of module to a select DOM element,
-         * and is run in the absence of an established "update" method.
-         * @param {Object} data Data used to seed generation of DOM
-         * @type {Function}
-         */
-        template : { val : null, wrt : true, cfg : false, enm : true },
-
-        /**
-         * The initialize method is run immediately after the module is
-         * added to the DOM
-         * @param {Element} element The top-level DOM element associated with the module
-         * @type {Function}
-         */
-        initialize : { val : null, wrt : false, cfg : false, enm : true },
-
-        /**
-         * Processes passed data and updates the module accordingly.
-         * @param {Object} data Updated data associated with this module
-         * @type {Function}
-         */
-        update : { val : null, wrt : false, cfg : false, enm : true },
-
-        /**
-         * Whenever the module is unloaded, a shutdown method may be run
-         * to perform additional shutdown steps.
-         * @type {Function}
-         */
-        shutdown : { val : null, wrt : false, cfg : false, enm : true },
-
-        /*************
-         *  Methods  *
-         *************/
-
-        destroy   : { val : destroy,   wrt : false, enm : true, cfg : false },
-
-        /***************
-         *  Accessors  *
-         ***************/
-
-        /**
-         * @property {Element} element The generated HTML element associated with the module
-         */
-        element : {
-            enm : true,
-            cfg : false,
-            get : function() { return this._element; },
-            set : deploy
-        },
-
-        /**
-         * An object containing various options used to alter the behavior
-         * of the module.
-         * @type {Object}
-         */
-        options : {
-            enm : true,
-            cfg : false,
-            get : function() { return this._options; },
-            set : function(options) {
-                // Merge options rather than replace entire object
-                for (var i in options) {
-                    this._options[i] = options[i];
-                }
-            }
-        },
-
-        /**
-         * The data associated with this module
-         * @type {Object}
-         */
-        data : {
-            enm : true,
-            cfg : false,
-            get : function() { return this._data; },
-            set : updateData
-        }
+        /* Override */
+        update : { val : null, wrt : true, enm : false, cfg : false },
     });
 
-}(this||window));
-;/* global Ascot */
-(function(window, undefined){
-    'use strict';
+    /*************
+     *  Exports  *
+     *************/
 
-    /**
-     * Recursively deploys a module based on the bundle.  Recursively deploys all submodules.
-     * The passed accessor function is recursively built out and passed to any controller function.
-     * @param  {Element}  element  A parent element that determines the context within which to deploy
-     * @param  {Function} accessor A tree of accessors that return modules in a module hierarchy
-     * @return {Object}            The newly built module
-     */
-    function deploy(element, accessor, target) {
-        /* jshint validthis : true */
-        var module, mod, submodules, sub;
-
-        // Allow for selector-based deployment
-        if (typeof element === 'string') {
-            target  = element;
-            element = document;
-
-        // If just passed an element only, deploy directly
-        } else if (element.tagName && !accessor && !target) {
-            target = element;
-        }
-
-        // Use either a passed target or a target specified by a CSS selector
-        // in the bundle
-        target = target || element.querySelector(this.target);
-        if (typeof target === 'string') { target = element.querySelector(target); }
-        if (!target) { throw new Error('No target specified for bundle definition'); }
-
-        // Make sure a settings object exists
-        this.settings = this.settings || {};
-
-        // Deploy as a module
-        if (this.module) {
-            module = this.module(this.settings);
-            module.element = target;
-        }
-
-        // Create an accessor if one has not already been created
-        accessor = accessor || access.bind(module);
-
-        // Build submodules
-        if (this.submodules) {
-            submodules = this.submodules;
-
-            for (var j in submodules) {
-                sub = submodules[j];
-
-                // Retrieve string-referenced bundles
-                if (sub.bundle) {
-                    mod = Ascot.bundles[sub.bundle].deploy(target, accessor, sub.target);
-
-                // Deploy locally-defined bundles
-                } else {
-                    mod = sub.deploy(target, accessor, sub.target);
-                }
-
-                // Attach an accessor for the submodule
-                accessor[j] = access.bind(mod);
-            }
-        }
-
-        // Call the optional controller
-        if (this.controller) {
-            this.controller.call(module, accessor);
-        }
-
-        // Initialize the module
-        if (module.initialize) {
-            module.initialize(target, this.settings.data, this.settings.options);
-        }
-
-        return module;
+    if (window && window.define) {
+        define('ascot.DOMView', ['ascot', 'ascot.EventEmitter'], function(ascot) {
+            ascot.DOMView = DOMView;
+            return DOMView;
+        });
+    } else {
+        global.ascot.DOMView = DOMView;
     }
 
-    /**
-     * A function that only returns its context.
-     * @param {Variant} query If accessing an array, specifies which item to return.  If accessing
-     * a templated element or a module and a string is provided, performs a querySelector operation.
-     * no index is specified, returns the object
-     */
-    function access(query) {
-        /* jshint validthis : true */
-        var el, elements;
-
-        // Return a specified index from an array
-        if (query !== undefined && Array.isArray(this)) {
-            return this[query];
-
-        // Query an element
-        } else if (this.tagName) {
-            el = this;
-        } else {
-            el = this.element;
-        }
-
-        // Return either a single element or an array of elements
-        if (el && query) {
-            elements = el.querySelectorAll(query);
-            if (elements.length === 1) { return elements[0]; }
-            else { return elements; }
-        }
-
-        return this;
-    }
-
-    /**
-     * Registers a build with the Ascot library
-     * @param  {String} name The name of the build
-     * @param  {Object} def  A build definition object
-     * @return {Function}    A factory function that applies a build to elements
-     */
-    function registerBundle(name, def) {
-        /* jshint validthis : true, camelcase : false */
-        var bundle     = Object.create({}, api);
-        var submodules = bundle.submodules = {};
-        var settings   = bundle.settings = {};
-        var isObject   = Ascot.utils.isObject;
-        var modSettings = ['data', 'options', 'template'];
-
-        // Adjust for single argument
-        if (name === Object(name)) {
-            def  = name;
-            name = false;
-        }
-
-        // If definition contains a bundle reference, do nothing--it is only a reference
-        if (def.bundle) { return def; }
-
-        // Sort submodule bundles from bundle/module properties
-        for (var i in def) {
-
-            // Copy settings
-            if (modSettings.indexOf(i) >= 0) {
-                settings[i] = def[i];
-                delete def[i];
-
-            // Retain bundle properties
-            } else if (i in api) {
-                bundle[i] = def[i];
-
-            // Copy submodule bundles
-            } else {
-                submodules[i] = def[i];
-                delete def[i];
-            }
-        }
-
-        // Create a module for bundles which have not had one specified
-        if (!bundle.module) { bundle.module = Ascot.defineModule(settings); }
-
-        // Register submodule bundles that are not named references
-        for (var j in submodules) {
-            if (isObject(submodules[j])) {
-                submodules[j] = registerBundle(submodules[j]);
-            }
-        }
-
-        // Add to collection if a name is specified
-        if (name) {
-            Ascot._bundles[name] = bundle;
-        }
-
-        return bundle;
-    }
-
-    /*******************
-     *  Ascot Exports  *
-     *******************/
-
-    // Make registerBundle a method of the Ascot library
-    Object.defineProperty(Ascot, 'registerBundle', {
-        value        : registerBundle,
-        writable     : false,
-        enumerable   : true,
-        configurable : false
-    });
-
-    /**
-     * A set of bundle functions that may be retrieved by name
-     * @type {Object}
-     */
-    Object.defineProperty(Ascot, '_bundles', {
-        value        : {},
-        writable     : true,
-        enumerable   : false,
-        configurable : false
-    });
-
-    /**
-     * A set of build functions that may be retrieved by name
-     * @type {Object}
-     */
-    Object.defineProperty(Ascot, 'bundles', {
-        enumerable   : true,
-        configurable : false,
-        get : function() { return this._bundles; }
-    });
-
-    /******************
-     *  External API  *
-     ******************/
-
-    var api = Ascot.utils.expandDescriptor({
-
-        /****************
-         *  Properties  *
-         ****************/
-
-        /**
-         * A module constructor
-         * @type {Function}
-         */
-        module : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * A controller to use when deploying a bundle
-         * @type {Function}
-         */
-        controller : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * Settings for a module
-         * @type {Object}
-         */
-        settings : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * A templating function to use
-         * @type {Function}
-         */
-        template : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * Data to pass to a module
-         * @type {Variant}
-         */
-        data : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * Options to pass to a modiule
-         * @type {Object}
-         */
-        options : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * A list of submodules associated with a bundle
-         * @type {Object}
-         */
-        submodules : { val : null, wrt : true, enm : true, cfg : false},
-
-        /**
-         * A CSS selector that determines where modules should be deployed
-         * @type {Object}
-         */
-        target : { val : null, wrt : true, enm : true, cfg : false },
-
-        /**
-         * If set to false, array data will not be applied iteratively
-         * @type {Boolean}
-         */
-        iterate : { val : true, wrt : true, enm : false, cfg : false },
-
-        /*************
-         *  Methods  *
-         *************/
-
-        deploy : { val : deploy, wrt : true, enm : true, cfg : false }
-
-    });
-
-}(this||window));
+})(this||window);

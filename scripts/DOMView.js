@@ -57,7 +57,7 @@
     /**
      * Gets a single element by query selector.  The element retrieved is relative
      * to this view's element.
-     * @param {String} selector A query selector string  
+     * @param {String} selector A query selector string
      */
     function getElementBySelector(selector) {
         var el = this.element;
@@ -100,7 +100,7 @@
      *  API  *
      *********/
 
-    global.ascot.DOMView = ascot(['EventEmitter'], {
+    var DOMView = ascot(['EventEmitter'], {
         construct : { val : construct, wrt : false, enm : false, cfg : false },
 
         data     : { get : getData, set : setData, enm : true,  cfg : true  },
@@ -115,5 +115,18 @@
         /* Override */
         update : { val : null, wrt : true, enm : false, cfg : false },
     });
+
+    /*************
+     *  Exports  *
+     *************/
+
+    if (window && window.define) {
+        define('ascot.DOMView', ['ascot', 'ascot.EventEmitter'], function(ascot) {
+            ascot.DOMView = DOMView;
+            return DOMView;
+        });
+    } else {
+        global.ascot.DOMView = DOMView;
+    }
 
 })(this||window);

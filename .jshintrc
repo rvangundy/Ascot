@@ -24,6 +24,7 @@
         "describe"   : true,
         "it"         : true,
         "beforeEach" : true,
-        "chai"       : true
+        "chai"       : true,
+        "define"     : true
     }
 }

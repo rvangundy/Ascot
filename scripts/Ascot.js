@@ -428,6 +428,10 @@
      *  Exports  *
      *************/
 
-    global.ascot = ascot;
+    if (window && window.define) {
+        define('ascot', [], function() { return ascot; });
+    } else {
+        global.ascot = ascot;
+    }
 
 })(this||window);

@@ -174,7 +174,7 @@
      *  API  *
      *********/
 
-    global.ascot.Model = ascot(['EventEmitter'], {
+    var Model = ascot(['EventEmitter'], {
         construct : construct,
 
         storeLocal   : { val : storeLocal,   wrt : true, enm : false, cfg : false },
@@ -185,5 +185,18 @@
         load  : load,
         set   : set
     });
+
+    /*************
+     *  Exports  *
+     *************/
+
+    if (window && window.define) {
+        define('ascot.Model', ['ascot'], function(ascot) {
+            ascot.Model = Model;
+            return Model;
+        });
+    } else {
+        global.ascot.Model = Model;
+    }
 
 })(this||window);
