@@ -56,6 +56,8 @@ Consider a hypothetical "car" class:
 
 (function(window, undefined) {
     
+    var color = null;
+    
     function construct() {
         // Build the car
     }
@@ -71,7 +73,8 @@ Consider a hypothetical "car" class:
     var Car = ascot({
         construct   : construct,
         start       : start,
-        pressBreaks : pressBreaks
+        pressBreaks : pressBreaks,
+        color       : color
     });
     
     // Export to your application's global namespace
@@ -191,3 +194,16 @@ It is often desired to create application-specific instances of mixed classes. W
 ```
 
 The ConvAirCar will inherit all methods from the FlyingCar.  Additionally, when constructed, it will run its own construct method *after* the Car and Airplane methods specified in the FlyingCar class. When started, it will run its own start method *before* the Car, Airplane, and FlyingCar start methods.
+
+##Property Descriptors
+The ascot definition block also allows for the use of (property descriptors)[https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty]. A property descriptor allows for methods and properties to be specified as either **data** or **accessor** properties. This is a handy feature when designing classes, allowing finer control over the behavior of properties. Ascot accepts shorthand versions of the lengthier property descriptors. Consider the following use of shorthand property descriptors when defining the ConvAirCar:
+
+```javascript
+var ConvAirCar = ascot([FlyingCar], {
+    construct : { $after : construct, enm : false, wrt : false, cfg : true },
+    start     : { $before : start, enm : true, wrt : true, cfg : false },
+    altitude  : { get : getAltitude, set : setAltitude, enm : true, cfg : false }
+});
+```
+
+Both the construct() and start() methods have been defined as data properties.  The construct method would not be enumerated or included in an Object.keys() call. It may also not be overwritten at run time without first being reconfigured using Object.defineProperty().  The start method is enumerable and writable, but may not be configured at run time. The new altitude property has been defined as an accessor property. When retrieving the .altitude property, it will return the value from a getAltitude method, and when set will pass the new value in to the setAltitude method.
