@@ -492,14 +492,14 @@
      *  API  *
      *********/
 
-    var EventEmitter = ascot({
+    var api = {
         on                 : on,
         off                : off,
         removeAllListeners : removeAllListeners,
         emit               : { val : emit, wrt : false, enm : false, cfg : false },
 
         eventListeners : { val : {}, wrt : true, enm : false, cfg : false }
-    });
+    };
 
     /*************
      *  Exports  *
@@ -507,11 +507,11 @@
 
     if (window && window.define) {
         define('ascot.EventEmitter', ['ascot'], function(ascot) {
-            ascot.EventEmitter = EventEmitter;
-            return EventEmitter;
+            ascot.EventEmitter = ascot(api);
+            return ascot.EventEmitter;
         });
     } else {
-        global.ascot.EventEmitter = EventEmitter;
+        global.ascot.EventEmitter = global.ascot(api);
     }
 
 })(this||window);
@@ -523,10 +523,11 @@
      ****************/
 
     /**
-     * Whether to store and retrieve this model from local storage
+     * Whether to always attempt updating from the online location rather than retreive
+     * from localStorage
      * @type {Boolean}
      */
-    var storeLocal = true;
+    var preferOnline = false;
 
     /**
      * The remote location of the data source for retrieval using XMLHttpRequest
@@ -535,11 +536,10 @@
     var src = null;
 
     /**
-     * Whether to always attempt updating from the online location rather than retreive
-     * from localStorage
+     * Whether to store and retrieve this model from local storage
      * @type {Boolean}
      */
-    var preferOnline = false;
+    var storeLocal = true;
 
     /******************
      *  Construction  *
@@ -691,7 +691,7 @@
      *  API  *
      *********/
 
-    var Model = ascot(['EventEmitter'], {
+    var api = {
         construct : construct,
 
         storeLocal   : { val : storeLocal,   wrt : true, enm : false, cfg : false },
@@ -701,19 +701,19 @@
         store : store,
         load  : load,
         set   : set
-    });
+    };
 
     /*************
      *  Exports  *
      *************/
 
     if (window && window.define) {
-        define('ascot.Model', ['ascot'], function(ascot) {
-            ascot.Model = Model;
-            return Model;
+        define('ascot.Model', ['ascot', 'ascot.EventEmitter'], function(ascot) {
+            ascot.Model = ascot(['EventEmitter'], api);
+            return ascot.Model;
         });
     } else {
-        global.ascot.Model = Model;
+        global.ascot.Model = global.ascot(['EventEmitter'], api);
     }
 
 })(this||window);
@@ -819,7 +819,7 @@
      *  API  *
      *********/
 
-    var DOMView = ascot(['EventEmitter'], {
+    var api = {
         construct : { val : construct, wrt : false, enm : false, cfg : false },
 
         data     : { get : getData, set : setData, enm : true,  cfg : true  },
@@ -833,7 +833,7 @@
 
         /* Override */
         update : { val : null, wrt : true, enm : false, cfg : false },
-    });
+    };
 
     /*************
      *  Exports  *
@@ -841,11 +841,11 @@
 
     if (window && window.define) {
         define('ascot.DOMView', ['ascot', 'ascot.EventEmitter'], function(ascot) {
-            ascot.DOMView = DOMView;
-            return DOMView;
+            ascot.DOMView = ascot(['EventEmitter'], api);
+            return ascot.DOMView;
         });
     } else {
-        global.ascot.DOMView = DOMView;
+        global.ascot.DOMView = global.ascot(['EventEmitter'], api);
     }
 
 })(this||window);

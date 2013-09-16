@@ -100,7 +100,7 @@
      *  API  *
      *********/
 
-    var DOMView = ascot(['EventEmitter'], {
+    var api = {
         construct : { val : construct, wrt : false, enm : false, cfg : false },
 
         data     : { get : getData, set : setData, enm : true,  cfg : true  },
@@ -114,7 +114,7 @@
 
         /* Override */
         update : { val : null, wrt : true, enm : false, cfg : false },
-    });
+    };
 
     /*************
      *  Exports  *
@@ -122,11 +122,11 @@
 
     if (window && window.define) {
         define('ascot.DOMView', ['ascot', 'ascot.EventEmitter'], function(ascot) {
-            ascot.DOMView = DOMView;
-            return DOMView;
+            ascot.DOMView = ascot(['EventEmitter'], api);
+            return ascot.DOMView;
         });
     } else {
-        global.ascot.DOMView = DOMView;
+        global.ascot.DOMView = global.ascot(['EventEmitter'], api);
     }
 
 })(this||window);

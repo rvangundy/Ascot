@@ -55,14 +55,14 @@
      *  API  *
      *********/
 
-    var EventEmitter = ascot({
+    var api = {
         on                 : on,
         off                : off,
         removeAllListeners : removeAllListeners,
         emit               : { val : emit, wrt : false, enm : false, cfg : false },
 
         eventListeners : { val : {}, wrt : true, enm : false, cfg : false }
-    });
+    };
 
     /*************
      *  Exports  *
@@ -70,11 +70,11 @@
 
     if (window && window.define) {
         define('ascot.EventEmitter', ['ascot'], function(ascot) {
-            ascot.EventEmitter = EventEmitter;
-            return EventEmitter;
+            ascot.EventEmitter = ascot(api);
+            return ascot.EventEmitter;
         });
     } else {
-        global.ascot.EventEmitter = EventEmitter;
+        global.ascot.EventEmitter = global.ascot(api);
     }
 
 })(this||window);

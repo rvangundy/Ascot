@@ -6,10 +6,11 @@
      ****************/
 
     /**
-     * Whether to store and retrieve this model from local storage
+     * Whether to always attempt updating from the online location rather than retreive
+     * from localStorage
      * @type {Boolean}
      */
-    var storeLocal = true;
+    var preferOnline = false;
 
     /**
      * The remote location of the data source for retrieval using XMLHttpRequest
@@ -18,11 +19,10 @@
     var src = null;
 
     /**
-     * Whether to always attempt updating from the online location rather than retreive
-     * from localStorage
+     * Whether to store and retrieve this model from local storage
      * @type {Boolean}
      */
-    var preferOnline = false;
+    var storeLocal = true;
 
     /******************
      *  Construction  *
@@ -174,7 +174,7 @@
      *  API  *
      *********/
 
-    var Model = ascot(['EventEmitter'], {
+    var api = {
         construct : construct,
 
         storeLocal   : { val : storeLocal,   wrt : true, enm : false, cfg : false },
@@ -184,19 +184,19 @@
         store : store,
         load  : load,
         set   : set
-    });
+    };
 
     /*************
      *  Exports  *
      *************/
 
     if (window && window.define) {
-        define('ascot.Model', ['ascot'], function(ascot) {
-            ascot.Model = Model;
-            return Model;
+        define('ascot.Model', ['ascot', 'ascot.EventEmitter'], function(ascot) {
+            ascot.Model = ascot(['EventEmitter'], api);
+            return ascot.Model;
         });
     } else {
-        global.ascot.Model = Model;
+        global.ascot.Model = global.ascot(['EventEmitter'], api);
     }
 
 })(this||window);
