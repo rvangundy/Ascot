@@ -58,7 +58,6 @@ module.exports = function (grunt) {
 
     grunt.registerTask('test', [
         'connect:test',
-        'qunit'
     ]);
 
     grunt.registerTask('default', [
