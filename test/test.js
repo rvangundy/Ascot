@@ -233,19 +233,15 @@ describe('Model', function() {
             assert.equal(model.valD, 17);
         });
 
-        it('should take an address and a value and change a specific entry', function () {
-            model.set('groupA.valC', 21);
-            assert.equal(model.groupA.valC, 21);
-        });
-
-        it('should take an address and a value and change a specific entry', function () {
+        it('should take a path and a value and change a specific entry', function () {
             model.set('groupA.valC', 21);
             assert.equal(model.groupA.valC, 21);
         });
 
         it('should trigger the onchange event when a change is made', function (done) {
-            model.on('change', function(evt) {
-                assert.equal(evt.address, 'groupA.valC');
+            model.on('change', function(data, path) {
+                assert.equal(data, model);
+                assert.equal(path, 'groupA.valC');
                 done();
             });
             model.set('groupA.valC', 23);
