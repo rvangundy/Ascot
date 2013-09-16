@@ -496,7 +496,6 @@
      * @param {String}  eventName The name of the event to emit
      * @param {Variant} arg       Any argument to pass to the event listeners
      */
-    function emit(eventName, arg) {
     function emit(eventName) {
         var args = Array.prototype.slice.call(arguments, 0);
         var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
@@ -566,7 +565,7 @@
      ******************/
 
     /**
-     * Constructs the model, establishing and loading its data source
+     * Constructs the model, establishing and loading its data source.
      * @param {String} src The data source associated with this model
      */
     function construct(src) {
@@ -619,6 +618,9 @@
     function parse(json) {
         var data = JSON.parse(json);
 
+        // Performs optional processing steps to modify the structure of the data
+        if (this.process) { data = this.process(data); }
+
         for (var i in data) { this[i] = data[i]; }
     }
 
@@ -668,24 +670,40 @@
      ********************/
 
     /**
+     * Resolves a path and returns relevant data
+     * @param {String} path A period-delimited path to some data
+     */
+    function resolve(path) {
+        var value = this;
+
+        path = path.split('.');
+
+        for (var i=0, len=path.length; i<len; i+=1) {
+            value = value[i];
+        }
+
+        return value;
+    }
+
+    /**
      * Sets data on the model
-     * @param {String}         address An address to a location within the data model
-     * @param {Object|Variant} data    The new data
+     * @param {String}         path An path to a location within the data model
+     * @param {Object|Variant} data The new data
      */
     function set(/* arguments */) {
-        var address, addr, data, target, key;
+        var path, addr, data, target, key;
 
         // Adjust for arguments
         if (arguments.length === 2) {
-            address = arguments[0];
+            path = arguments[0];
             data    = arguments[1];
         } else {
             data = arguments[0];
         }
 
-        // Handle addressed data change
-        if (address) {
-            addr   = address;
+        // Handle path-referenced data change
+        if (path) {
+            addr   = path;
             addr   = addr.split('.');
             key    = addr.pop();
             target = this;
@@ -704,7 +722,7 @@
             }
         }
 
-        this.emit('change', { data : this, address : address });
+        this.emit('change', this, path);
     }
 
     /*********
@@ -718,9 +736,11 @@
         src          : { val : src,          wrt : true, enm : false, cfg : false },
         preferOnline : { val : preferOnline, wrt : true, enm : false, cfg : false },
 
-        store : store,
-        load  : load,
-        set   : set
+        store   : store,
+        load    : load,
+        set     : set,
+        process : null,
+        resolve : resolve
     };
 
     /*************
@@ -760,7 +780,7 @@
         var div = document.createElement('div');
 
         div.innerHTML = this.template(this.data);
-        this.element  = div.firstChild;
+        this._element = div.firstChild;
     }
 
     /*************
@@ -799,7 +819,7 @@
      * @param {String} selector A query selector string
      */
     function getElementBySelector(selector) {
-        var el = this.element;
+        var el = this._element;
 
         return el.querySelector(selector);
     }
@@ -813,7 +833,7 @@
      * @param {Variant} data The data associated with the view
      */
     function setData(data) {
-        var el     = this.element;
+        var el     = this._element;
         var parent = el.parentNode;
 
         this._data = data;
@@ -824,7 +844,7 @@
         // Otherwise, re-render using a template and swap elements
         else if (this.template) {
             render.call(this);
-            if (parent) { parent.replaceChild(this.element, el); }
+            if (parent) { parent.replaceChild(this._element, el); }
         }
     }
 
@@ -835,6 +855,13 @@
         return this._data;
     }
 
+    /**
+     * Returns the view's top-level element
+     */
+    function getElement() {
+        return this._element;
+    }
+
     /*********
      *  API  *
      *********/
@@ -842,10 +869,11 @@
     var api = {
         construct : { val : construct, wrt : false, enm : false, cfg : false },
 
-        data     : { get : getData, set : setData, enm : true,  cfg : true  },
-        _data    : { val : null,    wrt : true,    enm : false, cfg : false },
-        element  : { val : null,    wrt : true,    enm : true,  cfg : false },
-        template : { val : null,    wrt : true,    enm : true,  cfg : false },
+        data     : { get : getData,    set : setData, enm : true,  cfg : true  },
+        _data    : { val : null,       wrt : true,    enm : false, cfg : false },
+        element  : { get : getElement,                enm : true,  cfg : false },
+        _element : { val : null,       wrt : true,    enm : false, cfg : false },
+        template : { val : null,       wrt : true,    enm : true,  cfg : false },
 
         // Handles
         handles  : { get : getHandles, set : setHandles, enm : true,  cfg : true  },

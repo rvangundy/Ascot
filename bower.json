@@ -1,6 +1,6 @@
 {
   "name": "ascot",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "devDependencies": {
     "qunit": "~1.11.0"
   }
