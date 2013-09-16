@@ -294,7 +294,7 @@ someView.paragraph.innerHTML = "Lots of shocking news tidbits here...";
 ```
 
 ###.template
-A templating function used to render the view. While part of the public API, it is used internally and should not be called like a method. It is advantageous to use an existing template library, such as Handlebars, for providing templating functionality.
+A templating function used to render the view. While part of the public API, it is used internally and should not be called like a method. It is advantageous to use an existing template library, such as Handlebars, for providing templating functionality. Template functions take some data as a parameter and return a string representation of the HTML.
 
 ##Methods
 ###.construct(data, template)
