@@ -1,4 +1,4 @@
-(function(window, undefined) {
+(function(global, undefined) {
     'use strict';
 
     /**
@@ -9,7 +9,7 @@
      * @return {Object}            A new object prototype
      */
     function ascot(/* arguments */) {
-        var mixins, descriptor, constructor;
+        var mixins, descriptor, constructor, item;
 
         // Establish appropriate arguments
         if (arguments.length === 2) {
@@ -24,7 +24,11 @@
 
         // Collect each prototype's descriptor
         for (var i=0, len=mixins.length; i<len; i+=1) {
-            mixins[i] = mixins[i].descriptor;
+            item = mixins[i];
+
+            // Allow for string references to base ascot classes
+            item = mixins[i] = typeof item === 'string' ? ascot[item] : item;
+            mixins[i] = item.descriptor;
         }
 
         // Expand and add current descriptor to mixins
@@ -424,6 +428,6 @@
      *  Exports  *
      *************/
 
-    window.ascot = ascot;
+    global.ascot = ascot;
 
 })(this||window);
