@@ -134,6 +134,19 @@
      ********************/
 
     /**
+     * Resolves a path and returns relevant data
+     * @param {String} path A period-delimited path to some data
+     */
+    function resolve(path) {
+        var value = this;
+        path = path.split('.');
+
+            value = value[i];
+
+        return value;
+    }
+
+    /**
      * Sets data on the model
      * @param {String}         address An address to a location within the data model
      * @param {Object|Variant} data    The new data
@@ -187,6 +200,11 @@
         store : store,
         load  : load,
         set   : set
+        store   : store,
+        load    : load,
+        set     : set,
+        process : null,
+        resolve : resolve
     };
 
     /*************
