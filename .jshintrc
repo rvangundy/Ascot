@@ -20,6 +20,10 @@
     "smarttabs": true,
     "validthis": true,
     "predef": {
-        "ascot" : true
+        "ascot"      : true,
+        "describe"   : true,
+        "it"         : true,
+        "beforeEach" : true,
+        "chai"       : true
     }
 }
