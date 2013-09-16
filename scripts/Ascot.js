@@ -216,6 +216,10 @@
             descriptor.value = appendIterator(val, modifier.value);
             break;
 
+        case '$override' :
+            descriptor.value = applyOverride(val, modifier.value);
+            break;
+
         default :
             break;
         }
@@ -355,6 +359,18 @@
         }
 
         return iterator;
+    }
+
+    /**
+     * Determines and returns the appropriate override. Overrides may be specified in two ways:
+     *       someFunc : { val : overrideFunc, enm : false, cfg : true, wrt : false, $override : true }
+     * or..  someFunc : { $override : overrideFunc }
+     *
+     * @param {Function} val A function listed under descriptor.value
+     * @param {Function} fn  A non-descriptor function override
+     */
+    function applyOverride(val, fn) {
+        return val || fn;
     }
 
     /***************
