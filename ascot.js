@@ -497,10 +497,14 @@
      * @param {Variant} arg       Any argument to pass to the event listeners
      */
     function emit(eventName, arg) {
+    function emit(eventName) {
+        var args = Array.prototype.slice.call(arguments, 0);
         var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
 
+        args.shift();
+
         for (var i=0, len=callbacks.length; i<len; i+=1) {
-            callbacks[i].call(this, arg);
+            callbacks[i].apply(this, args);
         }
     }
 
