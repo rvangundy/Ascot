@@ -29,7 +29,7 @@
      ******************/
 
     /**
-     * Constructs the model, establishing and loading its data source
+     * Constructs the model, establishing and loading its data source.
      * @param {String} src The data source associated with this model
      */
     function construct(src) {
@@ -81,6 +81,9 @@
      */
     function parse(json) {
         var data = JSON.parse(json);
+
+        // Performs optional processing steps to modify the structure of the data
+        if (this.process) { data = this.process(data); }
 
         for (var i in data) { this[i] = data[i]; }
     }
