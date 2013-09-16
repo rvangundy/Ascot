@@ -1,16 +1,23 @@
-<!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Ascot Test Fixture</title>
-    <link rel="stylesheet" href="../bower_components/qunit/qunit/qunit.css">
-    <script src="../bower_components/qunit/qunit/qunit.js"></script>
-    <script src="../scripts/ascot.js"></script>
-    <script src="../scripts/EventEmitter.js"></script>
+  <meta charset="utf-8">
+  <title>Mocha Tests</title>
+  <link rel="stylesheet" href="../bower_components/mocha/mocha.css" />
+  <script src="../bower_components/mocha/mocha.js"></script>
+  <script src="../bower_components/chai/chai.js"></script>
+  <script src="../scripts/ascot.js"></script>
+  <script src="../scripts/EventEmitter.js"></script>
+  <script src="../scripts/DOMView.js"></script>
+  <script src="../scripts/Model.js"></script>
+  <script>mocha.setup('bdd')</script>
+  <script src="test.js"></script>
+  <script>
+    window.onload = function() {
+        mocha.run();
+    };
+  </script>
 </head>
 <body>
-    <div id="qunit"></div>
-    <div id="qunit-fixture"></div>
-    <script src="test.js"></script>
+  <div id="mocha"></div>
 </body>
 </html>
