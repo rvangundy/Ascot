@@ -141,7 +141,7 @@ Let's create a flying car.
         // Convert between car mode and airplane mode
     }
     
-    var FlyingCar = ascot({
+    var FlyingCar = ascot([Car, Airplane], {
         construct : { $chain    : [Car, Airplane] },
         start     : { $iterate  : [Car, Airplane, start] },
         land      : { $override : land },
@@ -156,6 +156,38 @@ Let's create a flying car.
 
 Notice the use of **mixin modifiers** in the ascot block. These specify how methods are overridden when mixing together two or more classes.
 
-The **iterating modifiers**, $chain and $iterate, point to an array of implicit references to a class's method as well as explicit references to a specific function. Whenever the FlyingCar is constructed, it will call the construct() method for both the Car and the Airplane, passing the newly instantiated object as a parameter in to consecutive calls to construct (*note*: this depends on the design of the construct() method, if passing the object as an argument is intended). The $iterate modifier works much the same as $chain, except that it will not chain return values in to consecutive arguments. Rather, it will pass all arguments to consecutive calls, returning the return value of the last method called.
+The **iterating modifiers**, $chain and $iterate, point to an array of implicit references to a class's method as well as explicit references to a specific function. Whenever the FlyingCar is constructed, it will call the construct() method for both the Car and the Airplane, passing the newly instantiated object as a parameter in to consecutive calls to construct (*note:* this depends on the design of the construct() method, if passing the object as an argument is intended). The $iterate modifier works much the same as $chain, except that it will not chain return values in to consecutive arguments. Rather, it will pass all arguments to consecutive calls, returning the return value of the last method called.
 
 Whenever overriding an existing method that has already been defined in an ancestor class, an **override modifer** is necessary.  Ascot will throw an error if an override modifier has not been specified for an existing method. This prevents inadvertant overrides.
+
+### Inheriting from a mixed class
+
+It is often desired to create application-specific instances of mixed classes. When inheriting from a mixed class, the iterating and override modifiers may still be used. Additionally, **appending modifiers** may be used to further extend iterated methods. Lets create a specific model of flying car, a [ConvAirCar](http://i2.wp.com/upload.wikimedia.org/wikipedia/en/b/b5/ConvairCar_Model_118.jpg), that adds an additional step to the construct() and start() methods.
+
+```javascript
+// ConvAirCar.js
+
+(function(window, undefined) {
+    
+    var FlyingCar = YOUR_NAMESPACE.FlyingCar;
+
+    function construct() {
+        // Additional construction steps for a ConvAirCar
+    }
+
+    function start() {
+        // Additional steps for starting a ConvAirCar
+    }
+    
+    var ConvAirCar = ascot([FlyingCar], {
+        construct : { $after : construct },
+        start     : { $before : start }
+    });
+    
+    // Export to your application's global namespace
+    YOUR_NAMESPACE.ConvAirCar = ConvAirCar;
+    
+})(this||window);
+```
+
+The ConvAirCar will inherit all methods from the FlyingCar.  Additionally, when constructed, it will run its own construct method *after* the Car and Airplane methods specified in the FlyingCar class. When started, it will run its own start method *before* the Car, Airplane, and FlyingCar start methods.
