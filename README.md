@@ -304,7 +304,93 @@ Constructs the DOMView, passing in a pointer to its data along with a templating
 var someView = new ascot.DOMView();
 ```
 
-###.update(data, updateInfo)
+###.update(data, path)
 An update function that performs special rendering steps when the data property is changed. The base DOMView class does not implement an update function, but one may be established on child classes. If an update function is available, the template is not used when data is changed. This is useful for large templates or data sets where a full re-rendering may be costly, or if special functionality is desired when data is updated. It is not necessary to call update directly--just setting new data on the data property is sufficient. As will be seen, the update method is useful as a target when binding data to views.
 
-The 
+The data argument should be a valid JavaScript object. The optional path argument consists of a period-delimited path to the specific data that was changed.
+
+#Model
+Models are used to retrieve, process, store, and send a particular data set. Its API is as follows:
+
+##Properties
+###.preferOnline
+If true, the model will always attempt to reload data from a remote location rather than retreive it locally.
+
+###.process
+An optional function that processes data, often remapping or renaming data fields. This function is called internally and should not need to be called under normal circumstances. The process method takes any data as its input, and should output a valid JavaScript object. This is useful when loading third-party data that is not readily suitable for passing in to a view's template.
+
+###.src
+The URL or relative path to a particular data set. This should point to a location that returns valid JSON.
+
+###.storeLocal
+If true, any data retrieved will be stored using localStorage.
+
+##Methods
+###.construct(src)
+Constructs the model, automatically triggering an asynchronous request to load data either remotely or from localStorage. Use as follows:
+
+```javascript
+var someModel = new ascot.Model('path/to/some/data.json');
+```
+
+###.load(src)
+Triggers an asynchronous loading of data. This method is automatically called when constructing a model. How the data is loaded depends on the model's properties (see above) and on whether the data has previously been loaded and stored. Use as follows:
+
+```javascript
+someModel.load('path/to/some/data.json');
+```
+
+###.resolve(path)
+Resolves a particular value specified by path. The path should be a period-delimited string pointing to the individual value within the model. For example, if the model contains the following data:
+
+```javascript
+{
+    valA : 5,
+    objA : {
+        valB : 7
+    }
+}
+```
+
+Return the value of valB (7) as follows:
+
+```javascript
+var value = someModel.resolve('objA.valB');
+```
+
+###.set(path, data)
+Sets the data associated with the model. This may be called in one of two ways. If passing a single parameter of only data (which should be a valid JavaScript object), the new data will be recursively merged with the model, overwriting existing data. Paths are dot-delimited strings pointing to a specific data field. When specifying a path, the data argument may be any valid JavaScript value. Only the data specified by the path will be updated. Use as follows:
+
+```javascript
+someModel.set({ valA : 5, objA : { valB : 7 }});
+someModel.set('objA.valB', 13);
+```
+
+###.store()
+Stores data to localStorage, regardless of the storeLocal property. Data is stored by src. For example, if the url of the data is 'path/to/some/data', store() will place data at localStorage['path/to/some/data'].  Use as follows:
+
+```javascript
+someModel.store();
+```
+
+##Events
+###.onchange(data, path)
+Triggered whenever data has been changed as the result of the .set() method. The data passed will be a reference to the model itself, and the path is a period-delimited path as described in the .set() documentation. If a path was not passed to the .set() method, it will not be available here.  Use as follows:
+
+```javascript
+someModel.on('change', function(data, path) {
+    if (path) { alert('The new value of ' + path + ' is ' + someModel.resolve(path)); }
+});
+```
+
+###.onload(data)
+Triggered whenever data has been loaded. The onload event will be triggered whether data has been retrieved remotely or if it has been loaded from localStorage. The data parameter passed to onload matches the model. Use as follows:
+
+```javascript
+someModel.on('load', function(data) {
+    // Instantiate views, trigger application start, etc.
+});
+```
+
+#Model/View Binding
+Coming soon...
