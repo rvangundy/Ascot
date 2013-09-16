@@ -35,8 +35,8 @@ module.exports = function (grunt) {
                 separator: ';'
             },
             dist: {
-                src: ['scripts/ascot.js'],
-                dest: 'ascot.js'
+                src  : ['scripts/ascot.js', 'scripts/EventEmitter.js', 'scripts/Model.js', 'scripts/DOMView.js'],
+                dest : 'ascot.js'
             }
         },
         bump: {
@@ -75,7 +75,6 @@ module.exports = function (grunt) {
 
     grunt.registerTask('default', [
         'jshint',
-        'test',
         'concat',
         'bump'
     ]);
