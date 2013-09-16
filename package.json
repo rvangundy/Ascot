@@ -1,6 +1,6 @@
 {
   "name": "ascot",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "devDependencies": {
     "grunt": "~0.4.1",
     "grunt-contrib-jshint": "~0.6.0",
@@ -10,7 +10,8 @@
     "grunt-contrib-watch": "~0.5.3",
     "grunt-jsdoc": "~0.3.3",
     "grunt-contrib-concat": "~0.3.0",
-    "grunt-open": "~0.2.2"
+    "grunt-open": "~0.2.2",
+    "grunt-bump": "0.0.11"
   },
   "repository": {
     "type": "git",
