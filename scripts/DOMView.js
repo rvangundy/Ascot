@@ -21,7 +21,7 @@
         var div = document.createElement('div');
 
         div.innerHTML = this.template(this.data);
-        this.element  = div.firstChild;
+        this._element = div.firstChild;
     }
 
     /*************
@@ -60,7 +60,7 @@
      * @param {String} selector A query selector string
      */
     function getElementBySelector(selector) {
-        var el = this.element;
+        var el = this._element;
 
         return el.querySelector(selector);
     }
@@ -74,7 +74,7 @@
      * @param {Variant} data The data associated with the view
      */
     function setData(data) {
-        var el     = this.element;
+        var el     = this._element;
         var parent = el.parentNode;
 
         this._data = data;
@@ -85,7 +85,7 @@
         // Otherwise, re-render using a template and swap elements
         else if (this.template) {
             render.call(this);
-            if (parent) { parent.replaceChild(this.element, el); }
+            if (parent) { parent.replaceChild(this._element, el); }
         }
     }
 
@@ -96,6 +96,13 @@
         return this._data;
     }
 
+    /**
+     * Returns the view's top-level element
+     */
+    function getElement() {
+        return this._element;
+    }
+
     /*********
      *  API  *
      *********/
@@ -103,10 +110,11 @@
     var api = {
         construct : { val : construct, wrt : false, enm : false, cfg : false },
 
-        data     : { get : getData, set : setData, enm : true,  cfg : true  },
-        _data    : { val : null,    wrt : true,    enm : false, cfg : false },
-        element  : { val : null,    wrt : true,    enm : true,  cfg : false },
-        template : { val : null,    wrt : true,    enm : true,  cfg : false },
+        data     : { get : getData,    set : setData, enm : true,  cfg : true  },
+        _data    : { val : null,       wrt : true,    enm : false, cfg : false },
+        element  : { get : getElement,                enm : true,  cfg : false },
+        _element : { val : null,       wrt : true,    enm : false, cfg : false },
+        template : { val : null,       wrt : true,    enm : true,  cfg : false },
 
         // Handles
         handles  : { get : getHandles, set : setHandles, enm : true,  cfg : true  },
