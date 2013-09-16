@@ -53,11 +53,24 @@ module.exports = function (grunt) {
                 pushTo             : 'upstream',
                 gitDescribeOptions : '--tags --always --abbrev=1 --dirty=-d'
             }
+        },
+        open : {
+            test : {
+                path: 'http://localhost:8000/test',
+                app: 'Google Chrome'
+            }
+        },
+        watch: {
+            scripts: {
+                files: ['scripts/*.*', 'test/*.*']
+            }
         }
     });
 
     grunt.registerTask('test', [
         'connect:test',
+        'open:test',
+        'watch'
     ]);
 
     grunt.registerTask('default', [
