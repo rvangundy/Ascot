@@ -1,10 +1,10 @@
-(function(window, undefined) {
+(function(global, undefined) {
     'use strict';
 
     /**
      * Registers an event listener on the specified target
      * @param {String}   eventName The name of the event
-     * @param {Function} cb        The new callback to handle the event 
+     * @param {Function} cb        The new callback to handle the event
      */
     function on(eventName, cb) {
         var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
@@ -19,7 +19,7 @@
     /**
      * Registers an event listener on the specified target
      * @param {String}   eventName The name of the event
-     * @param {Function} cb        The new callback to handle the event 
+     * @param {Function} cb        The new callback to handle the event
      */
     function off(eventName, cb) {
         var index;
@@ -32,9 +32,16 @@
     }
 
     /**
+     * Removes all event listeners from the emitter
+     */
+    function removeAllListeners() {
+        this.eventListeners = [];
+    }
+
+    /**
      * Emits the specified event, calling and passing the optional argument to all listeners
      * @param {String}  eventName The name of the event to emit
-     * @param {Variant} arg       Any argument to pass to the event listeners 
+     * @param {Variant} arg       Any argument to pass to the event listeners
      */
     function emit(eventName, arg) {
         var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
@@ -48,10 +55,11 @@
      *  API  *
      *********/
 
-    window.ascot.EventEmitter = ascot({
-        on   : on,
-        off  : off,
-        emit : emit,
+    global.ascot.EventEmitter = ascot({
+        on                 : on,
+        off                : off,
+        removeAllListeners : removeAllListeners,
+        emit               : { val : emit, wrt : false, enm : false, cfg : false },
 
         eventListeners : { val : {}, wrt : true, enm : false, cfg : false }
     });
