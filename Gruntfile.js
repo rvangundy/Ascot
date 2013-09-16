@@ -22,15 +22,6 @@ module.exports = function (grunt) {
                 }
             }
         },
-        qunit: {
-            all: {
-                options: {
-                    urls: [
-                        'http://localhost:8000/test/index.html'
-                    ]
-                }
-            }
-        },
         connect: {
             test: {
                 options: {
