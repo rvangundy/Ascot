@@ -217,12 +217,14 @@
             break;
 
         case '$override' :
-            descriptor.value = applyOverride(val, modifier.value);
+            applyOverride(descriptor, modifier.value);
             break;
 
         default :
             break;
         }
+
+        return descriptor;
     }
 
     /**
@@ -362,15 +364,18 @@
     }
 
     /**
-     * Determines and returns the appropriate override. Overrides may be specified in two ways:
-     *       someFunc : { val : overrideFunc, enm : false, cfg : true, wrt : false, $override : true }
-     * or..  someFunc : { $override : overrideFunc }
-     *
-     * @param {Function} val A function listed under descriptor.value
-     * @param {Function} fn  A non-descriptor function override
+     * Applies the appropriate override. Accessor properties may be overridden
+     * by specifying $override : true, whereas data properties have their values overridden
+     * by $override : newValue
+     * @param {Object}  descriptor The descriptor to apply the override to
+     * @param {Variant} override        A function listed under descriptor.value
      */
-    function applyOverride(val, fn) {
-        return val || fn;
+    function applyOverride(descriptor, override) {
+
+        // Only modify values for data properties
+        if (!descriptor.get && !descriptor.set) {
+            descriptor.value = override;
+        }
     }
 
     /***************
