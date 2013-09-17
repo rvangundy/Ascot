@@ -29,14 +29,16 @@ describe('Ascot', function() {
     var SimpleClass = ascot({
         propA     : 'hello',
         propB     : { enm : true, cfg : false, val : 5, wrt: true },
+        propX     : { enm : true, cfg : false, val : 10, wrt: true },
         funcA     : function() { return 13; },
         funcB     : function(val) { this.propD = val; },
         construct : function(val) { this.propC = val; }
     });
 
     var MixedClassA = ascot([SimpleClass], {
-        funcA : { $chain   : [SimpleClass, subtract5] },
-        funcB : { $iterate : [SimpleClass, returnVal] }
+        funcA : { $chain    : [SimpleClass, subtract5] },
+        funcB : { $iterate  : [SimpleClass, returnVal] },
+        propX : { $override : 7 }
     });
 
     var MixedClassB = ascot([MixedClassA], {
@@ -73,6 +75,10 @@ describe('Ascot', function() {
 
         it('should call the constructor', function () {
             assert.equal(mixedModuleA.propC, 11);
+        });
+
+        it('should override when using the $override modifier', function () {
+            assert.equal(mixedModuleA.propX, 7);
         });
 
         it('should call chained methods', function () {
@@ -226,6 +232,13 @@ describe('Model', function() {
         });
     });
 
+    describe('#resolve()', function () {
+        it('should resolve a path to the correct value', function() {
+            model.set({ objA : { valA : 8 }});
+            assert.equal(model.resolve('objA.valA'), 8);
+        });
+    });
+
     describe('#set()', function () {
 
         it('should take an object as a parameter and set new data', function () {
@@ -248,3 +261,9 @@ describe('Model', function() {
         });
     });
 });
+
+// describe('Model/View Binding', function () {
+//     var model = new ascot.Model('sample.json');
+
+
+// });
