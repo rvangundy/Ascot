@@ -262,8 +262,23 @@ describe('Model', function() {
     });
 });
 
-// describe('Model/View Binding', function () {
-//     var model = new ascot.Model('sample.json');
+describe('Model/View Binding', function () {
+    var view;
+    var model = new ascot.Model();
+    function template(data) {
+        return '<div>' + data.valA + '</div>';
+    }
 
+    view  = new ascot.DOMView(model, template);
 
-// });
+    it('should pass new data in to its template when the model changes', function (done) {
+        model.load('sample.json');
+        model.on('load', function(data) {
+            assert.equal(view.element.innerHTML, 7);
+            data.set('valA', 13);
+            assert.equal(view.element.innerHTML, 13);
+            model.removeAllListeners();
+            done();
+        });
+    });
+});
