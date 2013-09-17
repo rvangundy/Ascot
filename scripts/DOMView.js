@@ -65,6 +65,40 @@
         return el.querySelector(selector);
     }
 
+    /******************
+     *  Data Binding  *
+     ******************/
+
+    /**
+     * Binds the view to its model. Whenever a model changes, it triggers a callback
+     * that updates the view accordingly.
+     */
+    function bindViewToModel() {
+        var model = this.data;
+
+        if (model.on) { model.on('change', updateView.bind(this)); }
+    }
+
+    /**
+     * Updates the view, either by calling an update() method or triggering a
+     * re-rendering of the template.
+     * @param {Object} data The data used to update the view
+     * @param {String} path A period-delimited path to the data being modified
+     */
+    function updateView(data, path) {
+        var el     = this._element;
+        var parent = el.parentNode;
+
+        // Use update methods if available
+        if (this.update) { this.update(data, path); }
+
+        // Otherwise, re-render using a template and swap elements
+        else if (this.template) {
+            render.call(this);
+            if (parent) { parent.replaceChild(this._element, el); }
+        }
+    }
+
     /***************
      *  Accessors  *
      ***************/
@@ -74,19 +108,12 @@
      * @param {Variant} data The data associated with the view
      */
     function setData(data) {
-        var el     = this._element;
-        var parent = el.parentNode;
+        // Don't update data by setting the data property multiple times
+        if (this._data === data) { return; }
 
         this._data = data;
-
-        // Use update methods if available
-        if (this.update) { this.update(data); }
-
-        // Otherwise, re-render using a template and swap elements
-        else if (this.template) {
-            render.call(this);
-            if (parent) { parent.replaceChild(this._element, el); }
-        }
+        bindViewToModel.call(this);
+        updateView.call(this, data);
     }
 
     /**
@@ -121,7 +148,7 @@
         _handles : { val : {},         wrt : true,       enm : false, cfg : false },
 
         /* Override */
-        update : { val : null, wrt : true, enm : false, cfg : false },
+        update : { val : null, wrt : true, enm : false, cfg : false }
     };
 
     /*************
