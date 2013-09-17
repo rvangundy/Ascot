@@ -10,6 +10,7 @@
     function construct(data, template) {
         this._data    = data     || this._data;
         this.template = template || this.template;
+        if (data) { bindViewToModel.call(this); }
         render.call(this);
     }
 
@@ -74,9 +75,13 @@
      * that updates the view accordingly.
      */
     function bindViewToModel() {
-        var model = this.data;
+        var model    = this.data;
+        var listener = updateView.bind(this);
 
-        if (model.on) { model.on('change', updateView.bind(this)); }
+        if (model.on) {
+            model.on('load', listener);
+            model.on('change', listener);
+        }
     }
 
     /**

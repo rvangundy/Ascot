@@ -435,4 +435,10 @@ someModel.on('load', function(data) {
 ```
 
 #Model/View Binding
-Coming soon...
+Binding views to models requires no additional steps other than setting a view's data to a particular model. This may be done on construction of the view or as follows:
+
+```javascript
+someView.data = someModel;
+```
+
+Whenever the model's data is changed by calling its .set() method, the view will be updated through its .update() method or by re-rendering it using its template. This action will occur automatically. In order to update a model whenever a view has changed, the view should be designed to make changes to the model appropriately. If a view is a form, a particular form field should have registered event handlers to modify a corresponding field in a model when its data is changed. A generic 'FormView' class may abstract this procedure, but such a class is not presently included in the Ascot library.
