@@ -1,3 +1,45 @@
+**Table of Contents**
+
+- [Ascot](#ascot)
+		- [Installation](#installation)
+		- [Usage](#usage)
+	- [Class Mixins](#class-mixins)
+		- [Creating a basic class](#creating-a-basic-class)
+		- [Creating a mixed class](#creating-a-mixed-class)
+		- [Inheriting from a mixed class](#inheriting-from-a-mixed-class)
+	- [Property Descriptors](#property-descriptors)
+- [EventEmitter](#eventemitter)
+	- [Methods](#methods)
+		- [.on(event, listener)](#onevent-listener)
+		- [.off(event, listener)](#offevent-listener)
+		- [.removeAllListeners(event)](#removealllistenersevent)
+		- [.emit(event, arg1, arg2, ..., argN)](#emitevent-arg1-arg2--argn)
+- [DOMView](#domview)
+	- [Properties](#properties)
+		- [.data](#data)
+		- [.element](#element)
+		- [.handles](#handles)
+		- [.template](#template)
+	- [Methods](#methods-1)
+		- [.construct(data, template)](#constructdata-template)
+		- [.update(data, path)](#updatedata-path)
+- [Model](#model)
+	- [Properties](#properties-1)
+		- [.preferOnline](#preferonline)
+		- [.process](#process)
+		- [.src](#src)
+		- [.storeLocal](#storelocal)
+	- [Methods](#methods-2)
+		- [.construct(src)](#constructsrc)
+		- [.load(src)](#loadsrc)
+		- [.resolve(path)](#resolvepath)
+		- [.set(path, data)](#setpath-data)
+		- [.store()](#store)
+	- [Events](#events)
+		- [.onchange(data, path)](#onchangedata-path)
+		- [.onload(data)](#onloaddata)
+- [Model/View Binding](#modelview-binding)
+
 Ascot
 =====
 
@@ -157,7 +199,7 @@ Notice the use of **mixin modifiers** in the ascot block. These specify how meth
 
 The **iterating modifiers**, $chain and $iterate, point to an array of implicit references to a class's method as well as explicit references to a specific function. Whenever the FlyingCar is constructed, it will call the construct() method for both the Car and the Airplane, passing the newly instantiated object as a parameter in to consecutive calls to construct (*note:* this depends on the design of the construct() method, if passing the object as an argument is intended). The $iterate modifier works much the same as $chain, except that it will not chain return values in to consecutive arguments. Rather, it will pass all arguments to consecutive calls, returning the return value of the last method called.
 
-Whenever overriding an existing method that has already been defined in an ancestor class, an **override modifer** is necessary.  Ascot will throw an error if an override modifier has not been specified for an existing method. This prevents inadvertant overrides.
+Whenever overriding an existing method that has already been defined in an ancestor class, an **override modifer** is necessary.  Ascot will throw an error if an override modifier has not been specified for an existing method. This prevents inadvertant overrides. While other modifiers may not be applied to accessors (see the section on property descriptors), the $override modifier may. To override an accessor, use '$override : true'.
 
 ### Inheriting from a mixed class
 It is often desired to create application-specific instances of mixed classes. When inheriting from a mixed class, the iterating and override modifiers may still be used. Additionally, **appending modifiers** may be used to further extend iterated methods. Lets create a specific model of flying car, a [ConvAirCar](http://i2.wp.com/upload.wikimedia.org/wikipedia/en/b/b5/ConvairCar_Model_118.jpg), that adds an additional step to the construct() and start() methods.
