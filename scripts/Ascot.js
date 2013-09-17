@@ -37,10 +37,10 @@
         }
 
         mixins.push(descriptor);
+        descriptor = combineDescriptors(mixins);
 
         // Form a new constructor
-        constructor = createConstructor();
-        constructor.descriptor = combineDescriptors(mixins);
+        constructor = createConstructor(descriptor);
 
         return constructor;
     }
@@ -53,15 +53,18 @@
      * Creates a new constructor that may be used to create objects with the 'new' keyword
      * @return {Function} A standard constructor function
      */
-    function createConstructor() {
-        function constructor(/* arguments */) {
-            /* jshint validthis : true */
-            Object.defineProperties(this, constructor.descriptor);
+    function createConstructor(descriptor) {
+        var constructor = (function(desc) {
+            return function(/* arguments */) {
+                /* jshint validthis : true */
+                Object.defineProperties(this, deepCopy(desc));
 
-            if (this.construct) { this.construct.apply(this, arguments); }
-        }
+                if (this.construct) { this.construct.apply(this, arguments); }
+            };
+        })(descriptor);
 
-        constructor.prototype = {};
+        constructor.prototype  = {};
+        constructor.descriptor = descriptor;
 
         return constructor;
     }
