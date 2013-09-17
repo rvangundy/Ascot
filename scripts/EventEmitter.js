@@ -32,10 +32,14 @@
     }
 
     /**
-     * Removes all event listeners from the emitter
+     * Removes all event listeners for a particular event from the emitter
      */
-    function removeAllListeners() {
-        this.eventListeners = [];
+    function removeAllListeners(eventName) {
+        if (eventName) {
+            this.eventListeners[eventName] = [];
+        } else {
+            this.eventListeners = {};
+        }
     }
 
     /**
