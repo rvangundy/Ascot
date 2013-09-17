@@ -143,7 +143,7 @@
         path = path.split('.');
 
         for (var i=0, len=path.length; i<len; i+=1) {
-            value = value[i];
+            value = value[path[i]];
         }
 
         return value;
