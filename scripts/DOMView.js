@@ -1,4 +1,4 @@
-(function(global, undefined) {
+define(['./ascot', './EventEmitter'], function(ascot, EventEmitter) {
     'use strict';
 
     /**
@@ -12,6 +12,8 @@
         this.template = template || this.template;
         if (data) { bindViewToModel.call(this); }
         render.call(this);
+
+        return this;
     }
 
     /**
@@ -76,11 +78,26 @@
      */
     function bindViewToModel() {
         var model    = this.data;
-        var listener = updateView.bind(this);
+        var listener = this._modelBindListener = this._modelBindListener || updateView.bind(this);
 
         if (model.on) {
             model.on('load', listener);
             model.on('change', listener);
+        }
+    }
+
+    /**
+     * Unbinds the view from its current model by removing its event listeners
+     */
+    function unbindViewFromModel() {
+        var model    = this.data;
+        var listener = this._modelBindListener;
+
+        if (!listener) { return; }
+
+        if (model.on) {
+            model.off('load', listener);
+            model.off('change', listener);
         }
     }
 
@@ -113,9 +130,7 @@
      * @param {Variant} data The data associated with the view
      */
     function setData(data) {
-        // Don't update data by setting the data property multiple times
-        if (this._data === data) { return; }
-
+        unbindViewFromModel.call(this);
         this._data = data;
         bindViewToModel.call(this);
         updateView.call(this, data);
@@ -160,13 +175,7 @@
      *  Exports  *
      *************/
 
-    if (window && window.define) {
-        define('ascot.DOMView', ['ascot', 'ascot.EventEmitter'], function(ascot) {
-            ascot.DOMView = ascot(['EventEmitter'], api);
-            return ascot.DOMView;
-        });
-    } else {
-        global.ascot.DOMView = global.ascot(['EventEmitter'], api);
-    }
+    ascot.DOMView = ascot([EventEmitter], api);
+    return ascot.DOMView;
 
-})(this||window);
+});

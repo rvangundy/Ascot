@@ -1,4 +1,4 @@
-(function(global, undefined) {
+define(['./ascot'], function(ascot) {
     'use strict';
 
     /**
@@ -75,13 +75,7 @@
      *  Exports  *
      *************/
 
-    if (window && window.define) {
-        define('ascot.EventEmitter', ['ascot'], function(ascot) {
-            ascot.EventEmitter = ascot(api);
-            return ascot.EventEmitter;
-        });
-    } else {
-        global.ascot.EventEmitter = global.ascot(api);
-    }
+    ascot.EventEmitter = ascot(api);
+    return ascot.EventEmitter;
 
-})(this||window);
+});

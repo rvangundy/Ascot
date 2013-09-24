@@ -1,4 +1,4 @@
-(function(global, undefined) {
+define(['./ascot', './EventEmitter'], function(ascot, EventEmitter) {
     'use strict';
 
     /****************
@@ -211,13 +211,7 @@
      *  Exports  *
      *************/
 
-    if (window && window.define) {
-        define('ascot.Model', ['ascot', 'ascot.EventEmitter'], function(ascot) {
-            ascot.Model = ascot(['EventEmitter'], api);
-            return ascot.Model;
-        });
-    } else {
-        global.ascot.Model = global.ascot(['EventEmitter'], api);
-    }
+    ascot.Model = ascot([EventEmitter], api);
+    return ascot.Model;
 
-})(this||window);
+});
