@@ -1,4 +1,4 @@
-(function(global, undefined) {
+define([], function(){
     'use strict';
 
     /**
@@ -132,14 +132,24 @@
      * @param {Array} descriptors An array of expanded descriptors.
      */
     function combineDescriptors(descriptors) {
-        var desc;
+        var desc, appendedDesc, propName;
         var newDescriptor = {};
 
         for (var i=0, len=descriptors.length; i<len; i+=1) {
             desc = descriptors[i];
 
             for (var j in desc) {
-                newDescriptor[j] = appendDescriptor(j, newDescriptor[j], desc[j]);
+                appendedDesc = appendDescriptor(j, newDescriptor[j], desc[j]);
+
+                // Determine if assigning a value to an accessed property
+                newDescriptor[j] = appendedDesc === true ? newDescriptor[j] : appendedDesc;
+
+                // Assign value to accessed property
+                if (appendedDesc === true) {
+                    propName = '_' + j;
+                    newDescriptor[propName] = newDescriptor[propName] || {};
+                    newDescriptor[propName].value = desc[j].value;
+                }
             }
         }
 
@@ -158,6 +168,12 @@
 
         target = target || {};
 
+        // Return true if this is an implicit accessor value override
+        if ((target.get || target.set) && (descriptor.value)) {
+            return true;
+        }
+
+        // Extract modifiers and copy over new descriptor properties
         for (var i in descriptor) {
 
             // Retain mixin modifiers
@@ -173,10 +189,17 @@
             }
         }
 
+        // OK to apply modifiers
         if (modifier) {
             applyModifier(propertyName, target, modifier);
         }
 
+        // Always allow overwriting of notational private variables
+        else if (propertyName.indexOf('_') === 0) {
+            return target;
+        }
+
+        // Don't allow inadvertant overrides
         else if (!modifier && !isNew) {
             throw new Error('Attempted to overwrite an existing property without a modifier. Apply a modifier or use $override.');
         }
@@ -452,10 +475,5 @@
      *  Exports  *
      *************/
 
-    if (window && window.define) {
-        define('ascot', [], function() { return ascot; });
-    } else {
-        global.ascot = ascot;
-    }
-
-})(this||window);
+    return ascot;
+});
