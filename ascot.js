@@ -1,4 +1,5 @@
-(function(global, undefined) {
+
+define('ascot',[], function(){
     'use strict';
 
     /**
@@ -37,10 +38,10 @@
         }
 
         mixins.push(descriptor);
+        descriptor = combineDescriptors(mixins);
 
         // Form a new constructor
-        constructor = createConstructor();
-        constructor.descriptor = combineDescriptors(mixins);
+        constructor = createConstructor(descriptor);
 
         return constructor;
     }
@@ -53,15 +54,18 @@
      * Creates a new constructor that may be used to create objects with the 'new' keyword
      * @return {Function} A standard constructor function
      */
-    function createConstructor() {
-        function constructor(/* arguments */) {
-            /* jshint validthis : true */
-            Object.defineProperties(this, constructor.descriptor);
+    function createConstructor(descriptor) {
+        var constructor = (function(desc) {
+            return function(/* arguments */) {
+                /* jshint validthis : true */
+                Object.defineProperties(this, deepCopy(desc));
 
-            if (this.construct) { this.construct.apply(this, arguments); }
-        }
+                if (this.construct) { this.construct.apply(this, arguments); }
+            };
+        })(descriptor);
 
-        constructor.prototype = {};
+        constructor.prototype  = {};
+        constructor.descriptor = descriptor;
 
         return constructor;
     }
@@ -129,14 +133,24 @@
      * @param {Array} descriptors An array of expanded descriptors.
      */
     function combineDescriptors(descriptors) {
-        var desc;
+        var desc, appendedDesc, propName;
         var newDescriptor = {};
 
         for (var i=0, len=descriptors.length; i<len; i+=1) {
             desc = descriptors[i];
 
             for (var j in desc) {
-                newDescriptor[j] = appendDescriptor(j, newDescriptor[j], desc[j]);
+                appendedDesc = appendDescriptor(j, newDescriptor[j], desc[j]);
+
+                // Determine if assigning a value to an accessed property
+                newDescriptor[j] = appendedDesc === true ? newDescriptor[j] : appendedDesc;
+
+                // Assign value to accessed property
+                if (appendedDesc === true) {
+                    propName = '_' + j;
+                    newDescriptor[propName] = newDescriptor[propName] || {};
+                    newDescriptor[propName].value = desc[j].value;
+                }
             }
         }
 
@@ -155,6 +169,12 @@
 
         target = target || {};
 
+        // Return true if this is an implicit accessor value override
+        if ((target.get || target.set) && (descriptor.value)) {
+            return true;
+        }
+
+        // Extract modifiers and copy over new descriptor properties
         for (var i in descriptor) {
 
             // Retain mixin modifiers
@@ -170,10 +190,17 @@
             }
         }
 
+        // OK to apply modifiers
         if (modifier) {
             applyModifier(propertyName, target, modifier);
         }
 
+        // Always allow overwriting of notational private variables
+        else if (propertyName.indexOf('_') === 0) {
+            return target;
+        }
+
+        // Don't allow inadvertant overrides
         else if (!modifier && !isNew) {
             throw new Error('Attempted to overwrite an existing property without a modifier. Apply a modifier or use $override.');
         }
@@ -217,12 +244,14 @@
             break;
 
         case '$override' :
-            descriptor.value = applyOverride(val, modifier.value);
+            applyOverride(descriptor, modifier.value);
             break;
 
         default :
             break;
         }
+
+        return descriptor;
     }
 
     /**
@@ -362,15 +391,18 @@
     }
 
     /**
-     * Determines and returns the appropriate override. Overrides may be specified in two ways:
-     *       someFunc : { val : overrideFunc, enm : false, cfg : true, wrt : false, $override : true }
-     * or..  someFunc : { $override : overrideFunc }
-     *
-     * @param {Function} val A function listed under descriptor.value
-     * @param {Function} fn  A non-descriptor function override
+     * Applies the appropriate override. Accessor properties may be overridden
+     * by specifying $override : true, whereas data properties have their values overridden
+     * by $override : newValue
+     * @param {Object}  descriptor The descriptor to apply the override to
+     * @param {Variant} override        A function listed under descriptor.value
      */
-    function applyOverride(val, fn) {
-        return val || fn;
+    function applyOverride(descriptor, override) {
+
+        // Only modify values for data properties
+        if (!descriptor.get && !descriptor.set) {
+            descriptor.value = override;
+        }
     }
 
     /***************
@@ -444,14 +476,10 @@
      *  Exports  *
      *************/
 
-    if (window && window.define) {
-        define('ascot', [], function() { return ascot; });
-    } else {
-        global.ascot = ascot;
-    }
+    return ascot;
+});
 
-})(this||window);
-;(function(global, undefined) {
+define('EventEmitter',['./ascot'], function(ascot) {
     'use strict';
 
     /**
@@ -485,10 +513,14 @@
     }
 
     /**
-     * Removes all event listeners from the emitter
+     * Removes all event listeners for a particular event from the emitter
      */
-    function removeAllListeners() {
-        this.eventListeners = [];
+    function removeAllListeners(eventName) {
+        if (eventName) {
+            this.eventListeners[eventName] = [];
+        } else {
+            this.eventListeners = {};
+        }
     }
 
     /**
@@ -524,17 +556,194 @@
      *  Exports  *
      *************/
 
-    if (window && window.define) {
-        define('ascot.EventEmitter', ['ascot'], function(ascot) {
-            ascot.EventEmitter = ascot(api);
-            return ascot.EventEmitter;
-        });
-    } else {
-        global.ascot.EventEmitter = global.ascot(api);
+    ascot.EventEmitter = ascot(api);
+    return ascot.EventEmitter;
+
+});
+
+define('DOMView',['./ascot', './EventEmitter'], function(ascot, EventEmitter) {
+    'use strict';
+
+    /**
+     * Constructs the DOMView, establishing its data and template and performing
+     * an initial rendering.
+     * @param {Variant}  data     The data associated with this view
+     * @param {Function} template An HTML templating function
+     */
+    function construct(data, template) {
+        this._data    = data     || this._data;
+        this.template = template || this.template;
+        if (data) { bindViewToModel.call(this); }
+        render.call(this);
+
+        return this;
     }
 
-})(this||window);
-;(function(global, undefined) {
+    /**
+     * Renders the DOMView using the available template. On rendering, a new element is created,
+     * and must be added to the DOM.
+     */
+    function render() {
+        var div = document.createElement('div');
+
+        div.innerHTML = this.template(this.data);
+        this._element = div.firstChild;
+    }
+
+    /*************
+     *  Handles  *
+     *************/
+
+    /**
+     * Establishes accessors to specific elements or sets of elements within this view.
+     * Handles are set using a hash map that associates handles with DOM query selector strings.
+     * @param {Object} handles A hash map of handles
+     */
+    function setHandles(handles) {
+        var _handles = this._handles;
+
+        for (var i in handles) {
+            Object.defineProperty(this, i, {
+                get          : getElementBySelector.bind(this, handles[i]),
+                enumerable   : true,
+                configurable : true
+            });
+
+            _handles[i] = handles[i];
+        }
+    }
+
+    /**
+     * Returns a set of current handles
+     */
+    function getHandles() {
+        return this._handles;
+    }
+
+    /**
+     * Gets a single element by query selector.  The element retrieved is relative
+     * to this view's element.
+     * @param {String} selector A query selector string
+     */
+    function getElementBySelector(selector) {
+        var el = this._element;
+
+        return el.querySelector(selector);
+    }
+
+    /******************
+     *  Data Binding  *
+     ******************/
+
+    /**
+     * Binds the view to its model. Whenever a model changes, it triggers a callback
+     * that updates the view accordingly.
+     */
+    function bindViewToModel() {
+        var model    = this.data;
+        var listener = this._modelBindListener = this._modelBindListener || updateView.bind(this);
+
+        if (model.on) {
+            model.on('load', listener);
+            model.on('change', listener);
+        }
+    }
+
+    /**
+     * Unbinds the view from its current model by removing its event listeners
+     */
+    function unbindViewFromModel() {
+        var model    = this.data;
+        var listener = this._modelBindListener;
+
+        if (!listener) { return; }
+
+        if (model.on) {
+            model.off('load', listener);
+            model.off('change', listener);
+        }
+    }
+
+    /**
+     * Updates the view, either by calling an update() method or triggering a
+     * re-rendering of the template.
+     * @param {Object} data The data used to update the view
+     * @param {String} path A period-delimited path to the data being modified
+     */
+    function updateView(data, path) {
+        var el     = this._element;
+        var parent = el.parentNode;
+
+        // Use update methods if available
+        if (this.update) { this.update(data, path); }
+
+        // Otherwise, re-render using a template and swap elements
+        else if (this.template) {
+            render.call(this);
+            if (parent) { parent.replaceChild(this._element, el); }
+        }
+    }
+
+    /***************
+     *  Accessors  *
+     ***************/
+
+    /**
+     * Sets the view's data, updating the view accordingly
+     * @param {Variant} data The data associated with the view
+     */
+    function setData(data) {
+        unbindViewFromModel.call(this);
+        this._data = data;
+        bindViewToModel.call(this);
+        updateView.call(this, data);
+    }
+
+    /**
+     * Gets the current view's data property
+     */
+    function getData() {
+        return this._data;
+    }
+
+    /**
+     * Returns the view's top-level element
+     */
+    function getElement() {
+        return this._element;
+    }
+
+    /*********
+     *  API  *
+     *********/
+
+    var api = {
+        construct : { val : construct, wrt : false, enm : false, cfg : false },
+
+        data     : { get : getData,    set : setData, enm : true,  cfg : true  },
+        _data    : { val : null,       wrt : true,    enm : false, cfg : false },
+        element  : { get : getElement,                enm : true,  cfg : false },
+        _element : { val : null,       wrt : true,    enm : false, cfg : false },
+        template : { val : null,       wrt : true,    enm : true,  cfg : false },
+
+        // Handles
+        handles  : { get : getHandles, set : setHandles, enm : true,  cfg : true  },
+        _handles : { val : {},         wrt : true,       enm : false, cfg : false },
+
+        /* Override */
+        update : { val : null, wrt : true, enm : false, cfg : false }
+    };
+
+    /*************
+     *  Exports  *
+     *************/
+
+    ascot.DOMView = ascot([EventEmitter], api);
+    return ascot.DOMView;
+
+});
+
+define('Model',['./ascot', './EventEmitter'], function(ascot, EventEmitter) {
     'use strict';
 
     /****************
@@ -679,7 +888,7 @@
         path = path.split('.');
 
         for (var i=0, len=path.length; i<len; i+=1) {
-            value = value[i];
+            value = value[path[i]];
         }
 
         return value;
@@ -747,153 +956,7 @@
      *  Exports  *
      *************/
 
-    if (window && window.define) {
-        define('ascot.Model', ['ascot', 'ascot.EventEmitter'], function(ascot) {
-            ascot.Model = ascot(['EventEmitter'], api);
-            return ascot.Model;
-        });
-    } else {
-        global.ascot.Model = global.ascot(['EventEmitter'], api);
-    }
+    ascot.Model = ascot([EventEmitter], api);
+    return ascot.Model;
 
-})(this||window);
-;(function(global, undefined) {
-    'use strict';
-
-    /**
-     * Constructs the DOMView, establishing its data and template and performing
-     * an initial rendering.
-     * @param {Variant}  data     The data associated with this view
-     * @param {Function} template An HTML templating function
-     */
-    function construct(data, template) {
-        this._data    = data     || this._data;
-        this.template = template || this.template;
-        render.call(this);
-    }
-
-    /**
-     * Renders the DOMView using the available template. On rendering, a new element is created,
-     * and must be added to the DOM.
-     */
-    function render() {
-        var div = document.createElement('div');
-
-        div.innerHTML = this.template(this.data);
-        this._element = div.firstChild;
-    }
-
-    /*************
-     *  Handles  *
-     *************/
-
-    /**
-     * Establishes accessors to specific elements or sets of elements within this view.
-     * Handles are set using a hash map that associates handles with DOM query selector strings.
-     * @param {Object} handles A hash map of handles
-     */
-    function setHandles(handles) {
-        var _handles = this._handles;
-
-        for (var i in handles) {
-            Object.defineProperty(this, i, {
-                get          : getElementBySelector.bind(this, handles[i]),
-                enumerable   : true,
-                configurable : true
-            });
-
-            _handles[i] = handles[i];
-        }
-    }
-
-    /**
-     * Returns a set of current handles
-     */
-    function getHandles() {
-        return this._handles;
-    }
-
-    /**
-     * Gets a single element by query selector.  The element retrieved is relative
-     * to this view's element.
-     * @param {String} selector A query selector string
-     */
-    function getElementBySelector(selector) {
-        var el = this._element;
-
-        return el.querySelector(selector);
-    }
-
-    /***************
-     *  Accessors  *
-     ***************/
-
-    /**
-     * Sets the view's data, updating the view accordingly
-     * @param {Variant} data The data associated with the view
-     */
-    function setData(data) {
-        var el     = this._element;
-        var parent = el.parentNode;
-
-        this._data = data;
-
-        // Use update methods if available
-        if (this.update) { this.update(data); }
-
-        // Otherwise, re-render using a template and swap elements
-        else if (this.template) {
-            render.call(this);
-            if (parent) { parent.replaceChild(this._element, el); }
-        }
-    }
-
-    /**
-     * Gets the current view's data property
-     */
-    function getData() {
-        return this._data;
-    }
-
-    /**
-     * Returns the view's top-level element
-     */
-    function getElement() {
-        return this._element;
-    }
-
-    /*********
-     *  API  *
-     *********/
-
-    var api = {
-        construct : { val : construct, wrt : false, enm : false, cfg : false },
-
-        data     : { get : getData,    set : setData, enm : true,  cfg : true  },
-        _data    : { val : null,       wrt : true,    enm : false, cfg : false },
-        element  : { get : getElement,                enm : true,  cfg : false },
-        _element : { val : null,       wrt : true,    enm : false, cfg : false },
-        template : { val : null,       wrt : true,    enm : true,  cfg : false },
-
-        // Handles
-        handles  : { get : getHandles, set : setHandles, enm : true,  cfg : true  },
-        _handles : { val : {},         wrt : true,       enm : false, cfg : false },
-
-        /* Override */
-        update : { val : null, wrt : true, enm : false, cfg : false },
-    };
-
-    /*************
-     *  Exports  *
-     *************/
-
-    if (window && window.define) {
-        define('ascot.DOMView', ['ascot', 'ascot.EventEmitter'], function(ascot) {
-            ascot.DOMView = ascot(['EventEmitter'], api);
-            return ascot.DOMView;
-        });
-    } else {
-        global.ascot.DOMView = global.ascot(['EventEmitter'], api);
-    }
-
-})(this||window);
+});
