@@ -30,13 +30,20 @@ module.exports = function (grunt) {
                 }
             }
         },
-        concat: {
-            options: {
-                separator: ';'
-            },
-            dist: {
-                src  : ['scripts/ascot.js', 'scripts/EventEmitter.js', 'scripts/Model.js', 'scripts/DOMView.js'],
-                dest : 'ascot.js'
+        requirejs: {
+            ascot : {
+                options : {
+                    name                    : 'ascot',
+                    out                     : 'ascot.js',
+                    baseUrl                 : './scripts',
+                    optimize                : 'none',
+                    optimizeCss             : 'none',
+                    findNestedDependencies  : true,
+                    preserveLicenseComments : false,
+                    useStrict               : true,
+                    wrap                    : false,
+                    include                 : ['EventEmitter', 'DOMView', 'Model']
+                }
             }
         },
         bump: {
@@ -75,7 +82,7 @@ module.exports = function (grunt) {
 
     grunt.registerTask('default', [
         'jshint',
-        'concat',
+        'requirejs:ascot',
         'bump'
     ]);
 };
