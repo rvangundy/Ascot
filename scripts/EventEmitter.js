@@ -1,81 +1,80 @@
-define(['./ascot'], function(ascot) {
-    'use strict';
+'use strict';
 
-    /**
-     * Registers an event listener on the specified target
-     * @param {String}   eventName The name of the event
-     * @param {Function} cb        The new callback to handle the event
-     */
-    function on(eventName, cb) {
-        var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
+var ascot = require('./Ascot.js');
 
-        // Do nothing if a callback has already been added
-        if (callbacks.indexOf(cb) >= 0) { return; }
+/**
+ * Registers an event listener on the specified target
+ * @param {String}   eventName The name of the event
+ * @param {Function} cb        The new callback to handle the event
+ */
+function on(eventName, cb) {
+    var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
 
-        // Add the callback to the list of callbacks
-        callbacks.push(cb);
+    // Do nothing if a callback has already been added
+    if (callbacks.indexOf(cb) >= 0) { return; }
+
+    // Add the callback to the list of callbacks
+    callbacks.push(cb);
+}
+
+/**
+ * Registers an event listener on the specified target
+ * @param {String}   eventName The name of the event
+ * @param {Function} cb        The new callback to handle the event
+ */
+function off(eventName, cb) {
+    var index;
+    var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
+
+    // Remove the callback from the list
+    index = callbacks.indexOf(cb);
+
+    if (index >= 0) { callbacks.splice(index, 1); }
+}
+
+/**
+ * Removes all event listeners for a particular event from the emitter
+ */
+function removeAllListeners(eventName) {
+    if (eventName) {
+        this.eventListeners[eventName] = [];
+    } else {
+        this.eventListeners = {};
     }
+}
 
-    /**
-     * Registers an event listener on the specified target
-     * @param {String}   eventName The name of the event
-     * @param {Function} cb        The new callback to handle the event
-     */
-    function off(eventName, cb) {
-        var index;
-        var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
+/**
+ * Emits the specified event, calling and passing the optional argument to all listeners
+ * @param {String}  eventName The name of the event to emit
+ * @param {Variant} arg       Any argument to pass to the event listeners
+ */
+function emit(eventName) {
+    var args = Array.prototype.slice.call(arguments, 0);
+    var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
 
-        // Remove the callback from the list
-        index = callbacks.indexOf(cb);
+    args.shift();
 
-        if (index >= 0) { callbacks.splice(index, 1); }
+    for (var i=0, len=callbacks.length; i<len; i+=1) {
+        callbacks[i].apply(this, args);
     }
+}
 
-    /**
-     * Removes all event listeners for a particular event from the emitter
-     */
-    function removeAllListeners(eventName) {
-        if (eventName) {
-            this.eventListeners[eventName] = [];
-        } else {
-            this.eventListeners = {};
-        }
-    }
+/*********
+ *  API  *
+ *********/
 
-    /**
-     * Emits the specified event, calling and passing the optional argument to all listeners
-     * @param {String}  eventName The name of the event to emit
-     * @param {Variant} arg       Any argument to pass to the event listeners
-     */
-    function emit(eventName) {
-        var args = Array.prototype.slice.call(arguments, 0);
-        var callbacks = this.eventListeners[eventName] = this.eventListeners[eventName] || [];
+var api = {
+    on                 : on,
+    off                : off,
+    removeAllListeners : removeAllListeners,
+    emit               : { val : emit, wrt : false, enm : false, cfg : false },
 
-        args.shift();
+    eventListeners : { val : {}, wrt : true, enm : false, cfg : false }
+};
 
-        for (var i=0, len=callbacks.length; i<len; i+=1) {
-            callbacks[i].apply(this, args);
-        }
-    }
+/*************
+ *  Exports  *
+ *************/
 
-    /*********
-     *  API  *
-     *********/
-
-    var api = {
-        on                 : on,
-        off                : off,
-        removeAllListeners : removeAllListeners,
-        emit               : { val : emit, wrt : false, enm : false, cfg : false },
-
-        eventListeners : { val : {}, wrt : true, enm : false, cfg : false }
-    };
-
-    /*************
-     *  Exports  *
-     *************/
-
-    ascot.EventEmitter = ascot(api);
-    return ascot.EventEmitter;
-
-});
+ascot.EventEmitter = ascot(api);
+module.exports = ascot.EventEmitter;

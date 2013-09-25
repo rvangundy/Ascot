@@ -30,19 +30,29 @@ module.exports = function (grunt) {
                 }
             }
         },
-        requirejs: {
-            ascot : {
+        browserify: {
+            options : {
+                transform: ['debowerify'],
+                alias:
+                [
+                    'scripts/Ascot.js:ascot',
+                    'scripts/DOMView.js:ascot.DOMView',
+                    'scripts/EventEmitter.js:ascot.EventEmitter',
+                    'scripts/Model.js:ascot.Model'
+                ]
+            },
+            main: {
+                src     : ['scripts/index.js'],
+                dest    : 'ascot.js',
                 options : {
-                    name                    : 'ascot',
-                    out                     : 'ascot.js',
-                    baseUrl                 : './scripts',
-                    optimize                : 'none',
-                    optimizeCss             : 'none',
-                    findNestedDependencies  : true,
-                    preserveLicenseComments : false,
-                    useStrict               : true,
-                    wrap                    : false,
-                    include                 : ['EventEmitter', 'DOMView', 'Model']
+                    standalone : 'scripts/index.js'
+                }
+            },
+            test: {
+                src  : ['test/test.js'],
+                dest : 'test/index.js',
+                options : {
+                    debug : true
                 }
             }
         },
@@ -69,12 +79,14 @@ module.exports = function (grunt) {
         },
         watch: {
             scripts: {
-                files: ['scripts/*.*', 'test/*.*']
+                files: ['scripts/*.*', 'test/*.*'],
+                tasks: ['browserify:test']
             }
         }
     });
 
     grunt.registerTask('test', [
+        'browserify:test',
         'connect:test',
         'open:test',
         'watch'
@@ -82,7 +94,7 @@ module.exports = function (grunt) {
 
     grunt.registerTask('default', [
         'jshint',
-        'requirejs:ascot',
+        'browserify:main',
         'bump'
     ]);
 };
