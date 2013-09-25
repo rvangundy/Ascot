@@ -5,10 +5,15 @@
   <link rel="stylesheet" href="../bower_components/mocha/mocha.css" />
   <script src="../bower_components/mocha/mocha.js"></script>
   <script src="../bower_components/chai/chai.js"></script>
-  <script>mocha.setup('bdd')</script>
+  <script>
+    mocha.setup('bdd');
+    window.onload = function() {
+        mocha.run();
+    };
+  </script>
 </head>
 <body>
   <div id="mocha"></div>
-  <script src="../bower_components/requirejs/require.js" data-main="./test"></script>
+  <script src="index.js"></script>
 </body>
 </html>
