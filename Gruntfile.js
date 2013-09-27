@@ -41,13 +41,13 @@ module.exports = function (grunt) {
                     'scripts/Model.js:ascot.Model'
                 ]
             },
-            main: {
-                src     : ['scripts/index.js'],
-                dest    : 'ascot.js',
-                options : {
-                    standalone : 'scripts/index.js'
-                }
-            },
+            // main: {
+            //     src  : ['scripts/index.js'],
+            //     dest : 'ascot.js',
+            //     options : {
+            //         standalone : 'scripts/index.js'
+            //     }
+            // },
             test: {
                 src  : ['test/test.js'],
                 dest : 'test/index.js',
@@ -86,7 +86,7 @@ module.exports = function (grunt) {
     });
 
     grunt.registerTask('test', [
-        'browserify:test',
+        'browserify',
         'connect:test',
         'open:test',
         'watch'
@@ -94,7 +94,6 @@ module.exports = function (grunt) {
 
     grunt.registerTask('default', [
         'jshint',
-        'browserify:main',
         'bump'
     ]);
 };
