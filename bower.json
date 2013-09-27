@@ -1,6 +1,7 @@
 {
   "name": "ascot",
-  "version": "0.3.29",
+  "version": "0.3.34",
+  "main":"scripts/index.js",
   "devDependencies": {
     "mocha": "~1.13.0",
     "chai": "~1.8.0"
