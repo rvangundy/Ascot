@@ -1,5 +1,11 @@
-!function(e){"object"==typeof exports?module.exports=e():"function"==typeof define&&define.amd?define(e):"undefined"!=typeof window?window.scriptsindexjs=e():"undefined"!=typeof global?global.scriptsindexjs=e():"undefined"!=typeof self&&(self.scriptsindexjs=e())}(function(){var define,module,exports;
-return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"UI2WPJ":[function(require,module,exports){
+(function(e){if("function"==typeof bootstrap)bootstrap("scripts/index.js",e);else if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else if("undefined"!=typeof ses){if(!ses.ok())return;ses.makeScriptsindexjs=e}else"undefined"!=typeof window?window.scriptsindexjs=e():global.scriptsindexjs=e()})(function(){var define,ses,bootstrap,module,exports;
+return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"ascot.Model":[function(require,module,exports){
+module.exports=require('FFRxKb');
+},{}],"ascot.EventEmitter":[function(require,module,exports){
+module.exports=require('BvhrnU');
+},{}],"ascot.DOMView":[function(require,module,exports){
+module.exports=require('GirLh0');
+},{}],"UI2WPJ":[function(require,module,exports){
 'use strict';
 
 /**
@@ -478,8 +484,6 @@ function deepCopy(item) {
 
 module.exports = ascot;
 
-},{}],"ascot.main":[function(require,module,exports){
-module.exports=require('UI2WPJ');
 },{}],"GirLh0":[function(require,module,exports){
 'use strict';
 
@@ -681,9 +685,7 @@ var api = {
 ascot.DOMView = ascot([EventEmitter], api);
 module.exports = ascot.DOMView;
 
-},{"ascot.EventEmitter":"BvhrnU","ascot.main":"UI2WPJ"}],"ascot.DOMView":[function(require,module,exports){
-module.exports=require('GirLh0');
-},{}],"BvhrnU":[function(require,module,exports){
+},{"ascot.EventEmitter":"BvhrnU","ascot.main":"UI2WPJ"}],"BvhrnU":[function(require,module,exports){
 'use strict';
 
 var ascot = require('ascot.main');
@@ -765,9 +767,7 @@ var api = {
 ascot.EventEmitter = ascot(api);
 module.exports = ascot.EventEmitter;
 
-},{"ascot.main":"UI2WPJ"}],"ascot.EventEmitter":[function(require,module,exports){
-module.exports=require('BvhrnU');
-},{}],"FFRxKb":[function(require,module,exports){
+},{"ascot.main":"UI2WPJ"}],"FFRxKb":[function(require,module,exports){
 'use strict';
 
 var ascot = require('ascot.main');
@@ -986,9 +986,7 @@ var api = {
 ascot.Model = ascot([EventEmitter], api);
 module.exports = ascot.Model;
 
-},{"ascot.EventEmitter":"BvhrnU","ascot.main":"UI2WPJ"}],"ascot.Model":[function(require,module,exports){
-module.exports=require('FFRxKb');
-},{}],9:[function(require,module,exports){
+},{"ascot.EventEmitter":"BvhrnU","ascot.main":"UI2WPJ"}],8:[function(require,module,exports){
 'use strict';
 
 var ascot = require('ascot.main');
@@ -997,7 +995,9 @@ require('ascot.DOMView');
 require('ascot.Model');
 
 module.exports = ascot;
-},{"ascot.DOMView":"GirLh0","ascot.EventEmitter":"BvhrnU","ascot.Model":"FFRxKb","ascot.main":"UI2WPJ"}]},{},[9])
-(9)
+
+},{"ascot.DOMView":"GirLh0","ascot.EventEmitter":"BvhrnU","ascot.Model":"FFRxKb","ascot.main":"UI2WPJ"}],"ascot.main":[function(require,module,exports){
+module.exports=require('UI2WPJ');
+},{}]},{},[8])(8)
 });
 ;
