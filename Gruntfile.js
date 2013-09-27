@@ -35,7 +35,7 @@ module.exports = function (grunt) {
                 transform: ['debowerify'],
                 alias:
                 [
-                    'scripts/Ascot.js:ascot',
+                    'scripts/Ascot.js:ascot.main',
                     'scripts/DOMView.js:ascot.DOMView',
                     'scripts/EventEmitter.js:ascot.EventEmitter',
                     'scripts/Model.js:ascot.Model'
