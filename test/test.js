@@ -1,8 +1,7 @@
 'use strict';
 
-var ascot = require('../scripts/index.js');
-
-var assert = chai.assert;
+var ascot        = require('../scripts/index.js');
+var assert       = chai.assert;
 
 /*******************************
  *  Basic Object Construction  *
