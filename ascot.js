@@ -478,13 +478,13 @@ function deepCopy(item) {
 
 module.exports = ascot;
 
-},{}],"ascot":[function(require,module,exports){
+},{}],"ascot.main":[function(require,module,exports){
 module.exports=require('UI2WPJ');
 },{}],"GirLh0":[function(require,module,exports){
 'use strict';
 
-var ascot        = require('./Ascot.js');
-var EventEmitter = require('./EventEmitter.js');
+var ascot        = require('ascot.main');
+var EventEmitter = require('ascot.EventEmitter');
 
 /**
  * Constructs the DOMView, establishing its data and template and performing
@@ -681,12 +681,12 @@ var api = {
 ascot.DOMView = ascot([EventEmitter], api);
 module.exports = ascot.DOMView;
 
-},{"./Ascot.js":"UI2WPJ","./EventEmitter.js":"BvhrnU"}],"ascot.DOMView":[function(require,module,exports){
+},{"ascot.EventEmitter":"BvhrnU","ascot.main":"UI2WPJ"}],"ascot.DOMView":[function(require,module,exports){
 module.exports=require('GirLh0');
 },{}],"BvhrnU":[function(require,module,exports){
 'use strict';
 
-var ascot = require('./Ascot.js');
+var ascot = require('ascot.main');
 
 /**
  * Registers an event listener on the specified target
@@ -765,13 +765,13 @@ var api = {
 ascot.EventEmitter = ascot(api);
 module.exports = ascot.EventEmitter;
 
-},{"./Ascot.js":"UI2WPJ"}],"ascot.EventEmitter":[function(require,module,exports){
+},{"ascot.main":"UI2WPJ"}],"ascot.EventEmitter":[function(require,module,exports){
 module.exports=require('BvhrnU');
 },{}],"FFRxKb":[function(require,module,exports){
 'use strict';
 
-var ascot = require('./Ascot.js');
-var EventEmitter = require('./EventEmitter.js');
+var ascot = require('ascot.main');
+var EventEmitter = require('ascot.EventEmitter');
 
 /****************
  *  Properties  *
@@ -986,19 +986,18 @@ var api = {
 ascot.Model = ascot([EventEmitter], api);
 module.exports = ascot.Model;
 
-},{"./Ascot.js":"UI2WPJ","./EventEmitter.js":"BvhrnU"}],"ascot.Model":[function(require,module,exports){
+},{"ascot.EventEmitter":"BvhrnU","ascot.main":"UI2WPJ"}],"ascot.Model":[function(require,module,exports){
 module.exports=require('FFRxKb');
 },{}],9:[function(require,module,exports){
 'use strict';
-/* jshint unused : false */
 
-var ascot        = require('./Ascot.js');
-var EventEmitter = require('./EventEmitter.js');
-var DOMView      = require('./DOMView.js');
-var Model        = require('./Model.js');
+var ascot = require('ascot.main');
+require('ascot.EventEmitter');
+require('ascot.DOMView');
+require('ascot.Model');
 
 module.exports = ascot;
-},{"./Ascot.js":"UI2WPJ","./DOMView.js":"GirLh0","./EventEmitter.js":"BvhrnU","./Model.js":"FFRxKb"}]},{},[9])
+},{"ascot.DOMView":"GirLh0","ascot.EventEmitter":"BvhrnU","ascot.Model":"FFRxKb","ascot.main":"UI2WPJ"}]},{},[9])
 (9)
 });
 ;
