@@ -13,7 +13,7 @@ function construct(data, template) {
     this._data    = data     || this._data;
     this.template = template || this.template;
     if (data) { bindViewToModel.call(this); }
-    render.call(this);
+    render.call(this, true);
 
     return this;
 }
@@ -22,10 +22,21 @@ function construct(data, template) {
  * Renders the DOMView using the available template. On rendering, a new element is created,
  * and must be added to the DOM.
  */
-function render() {
+function render(ignoreError) {
+    var innerHTML;
     var div = document.createElement('div');
 
-    div.innerHTML = this.template(this.data);
+    if (ignoreError) {
+        try {
+            innerHTML = this.template(this.data);
+        } catch(e) {
+            innerHTML = '<div></div>';
+        }
+    } else {
+        innerHTML = this.template(this.data);
+    }
+
+    div.innerHTML = innerHTML;
     this._element = div.firstChild;
 }
 
@@ -110,8 +121,11 @@ function unbindViewFromModel() {
  * @param {String} path A period-delimited path to the data being modified
  */
 function updateView(data, path) {
-    var el     = this._element;
-    var parent = el.parentNode;
+    var parent;
+    var el = this._element;
+
+    if (!el) { return; }
+    parent = el.parentNode;
 
     // Use update methods if available
     if (this.update) { this.update(data, path); }
