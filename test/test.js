@@ -176,7 +176,6 @@ describe('DOMView', function () {
 
 describe('Model', function() {
     localStorage.clear();
-    var model = new ascot.Model();
     var sampleDataA = {
         'valA' : 7,
         'valB' : 13,
@@ -185,9 +184,20 @@ describe('Model', function() {
             'valB' : 19
         }
     };
+    var model = new ascot.Model();
     var sampleDataB = {
         'valA' : 5
     };
+
+    describe('#construct()', function() {
+        it('should load direct data passed in to its constructor', function(done){
+            var model = new ascot.Model(sampleDataA);
+            model.on('load', function(data) {
+                assert.equal(data.groupA.valC, 17);
+                done();
+            });
+        });
+    });
 
     describe('#load()', function() {
         it('should load new data remotely', function (done) {
