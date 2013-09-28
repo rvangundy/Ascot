@@ -379,7 +379,17 @@ var someModel = new ascot.Model('path/to/some/data.json');
 To link to locally defined data,
 
 ```javascript
-var someModel = new ascot.Model({ someData : 'hello!'});
+var someModel = new ascot.Model({ someData : 'hello!' });
+```
+
+Note that even if data is defined locally, it is still committed to the model asynchronously. This means that any functionality which may only happen after data has been loaded in to the model should be handled asynchronously as follows:
+
+```javascript
+var someModel = new ascot.Model({ someData : 'hello' });
+
+someModel.on('load', function(data) {
+	// Do something with the data here
+});
 ```
 
 ###.load(src)
