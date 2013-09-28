@@ -35,7 +35,15 @@ var storeLocal = true;
  * @param {String} src The data source associated with this model
  */
 function construct(src) {
-    if (src) { this.load(src); }
+    if (src) {
+        if (typeof src === 'string') {
+            load.call(this, src);
+        }
+
+        else if (src === Object(src)) {
+            setTimeout(loadDirectData.bind(this, src), 0);
+        }
+    }
 }
 
 /**********************************
@@ -46,8 +54,10 @@ function construct(src) {
  * Stores the model to local storage.  Stored as a key/value pair where
  * the key is the src of the data and the value is a JSON string.
  */
-function store() {
-    localStorage[src] = JSON.stringify(this);
+function store(name) {
+    name = name || this.src;
+
+    localStorage[name] = JSON.stringify(this);
 }
 
 /**
@@ -131,6 +141,15 @@ function handleXHRResponse(xhr) {
     }
 }
 
+/**
+ * Loads direct data that has been passed as a constructor on creating the model.
+ * @param {Object} data Some data to associate with the model
+ */
+function loadDirectData(data) {
+    set.call(this, data);
+    this.emit('load', this);
+}
+
 /********************
  *  Data Accessors  *
  ********************/
@@ -162,7 +181,7 @@ function set(/* arguments */) {
     // Adjust for arguments
     if (arguments.length === 2) {
         path = arguments[0];
-        data    = arguments[1];
+        data = arguments[1];
     } else {
         data = arguments[0];
     }
