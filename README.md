@@ -356,7 +356,7 @@ Models are used to retrieve, process, store, and send a particular data set. Its
 
 ##Properties
 ###.preferOnline
-If true, the model will always attempt to reload data from a remote location rather than retreive it locally.
+If true, the model will always attempt to reload data from a remote location rather than retrieve it locally.
 
 ###.process
 An optional function that processes data, often remapping or renaming data fields. This function is called internally and should not need to be called under normal circumstances. The process method takes any data as its input, and should output a valid JavaScript object. This is useful when loading third-party data that is not readily suitable for passing in to a view's template.
