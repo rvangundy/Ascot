@@ -369,10 +369,17 @@ If true, any data retrieved will be stored using localStorage.
 
 ##Methods
 ###.construct(src)
-Constructs the model, automatically triggering an asynchronous request to load data either remotely or from localStorage. Use as follows:
+Constructs the model, automatically triggering an asynchronous request to load data either remotely or from localStorage. Use in one of two ways:
 
+To link to a remote resource,
 ```javascript
 var someModel = new ascot.Model('path/to/some/data.json');
+```
+
+To link to locally defined data,
+
+```javascript
+var someModel = new ascot.Model({ someData : 'hello!'});
 ```
 
 ###.load(src)
