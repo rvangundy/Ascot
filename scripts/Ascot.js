@@ -117,10 +117,7 @@ function expandDescriptor(descriptor) {
     // Create a default desciptor
     else {
         return {
-            writable     : true,
-            enumerable   : true,
-            configurable : true,
-            value        : descriptor
+            value : descriptor
         };
     }
 }
@@ -195,6 +192,11 @@ function appendDescriptor(propertyName, target, descriptor) {
 
     // Always allow overwriting of notational private variables
     else if (propertyName.indexOf('_') === 0) {
+        return target;
+    }
+
+    // Allow non-functional overrides
+    else if (typeof target.value !== 'function') {
         return target;
     }
 
