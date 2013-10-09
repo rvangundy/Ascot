@@ -12,6 +12,8 @@ var EventEmitter = require('./EventEmitter.js');
 function construct(data, template) {
     this._data    = data     || this._data;
     this.template = template || this.template;
+    this.handles  = this.handles;
+
     if (data) { bindViewToModel.call(this); }
     render.call(this, true);
 
