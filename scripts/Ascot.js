@@ -14,6 +14,9 @@ function ascot(/* arguments */) {
     if (arguments.length === 2) {
         mixins     = arguments[0];
         descriptor = arguments[1];
+    } else if (Array.isArray(arguments[0])) {
+        mixins     = arguments[0];
+        descriptor = {};
     } else {
         mixins     = [];
         descriptor = arguments[0];
