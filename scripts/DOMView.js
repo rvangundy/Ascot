@@ -57,6 +57,7 @@ function setHandles(handles) {
     for (var i in handles) {
         Object.defineProperty(this, i, {
             get          : getElementBySelector.bind(this, handles[i]),
+            set          : overrideHandle.bind(this, i),
             enumerable   : true,
             configurable : true
         });
@@ -73,6 +74,33 @@ function getHandles() {
 }
 
 /**
+ * Overrides an element handle with an instantiated view element
+ * @param {String} handleName The name of the handle to override
+ * @param {DOMView} view A view to replace a current element
+ */
+function overrideHandle (handleName, view) {
+    var selector = this._handles[handleName];
+    var element  = this.element.querySelector(selector);
+    var parent   = element.parentNode;
+
+    // If overriding with an element, just perform a simple replace child
+    if (view.tagName && parent) {
+        parent.replaceChild(view, element);
+    }
+
+    // If overriding with a view, replace with its element and remove the handle accessor
+    else if (view.element) {
+        parent.replaceChild(view.element, element);
+        Object.defineProperty(this, handleName, {
+            value        : view,
+            writable     : true,
+            configurable : true,
+            enumerable   : true
+        });
+    }
+}
+
+/**
  * Gets a single element by query selector.  The element retrieved is relative
  * to this view's element.
  * @param {String} selector A query selector string
@@ -81,6 +109,18 @@ function getElementBySelector(selector) {
     var el = this._element;
 
     return el.querySelector(selector);
+}
+
+/**********************
+ *  DOM Manipulation  *
+ **********************/
+
+/**
+ * Appends a child element to this view's element
+ * @param {View} view A view to append to this view
+ */
+function appendChild(view) {
+    this.element.appendChild(view.element);
 }
 
 /******************
@@ -189,6 +229,7 @@ function setTemplate(template) {
 
 var api = {
     construct : { val : construct, wrt : false, enm : false, cfg : false },
+    appendChild : { val : appendChild, wrt : true, enm : false, cfg : false },
 
     data      : { get : getData,    set : setData, enm : true,  cfg : true  },
     _data     : { val : null,       wrt : true,    enm : false, cfg : false },
